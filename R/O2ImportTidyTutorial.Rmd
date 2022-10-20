@@ -1,0 +1,232 @@
+---
+title: "O2ImportTidyTutorial"
+author:
+
+- Douglas A. Campbell
+- Maximilian Berthold
+- Laurel Genge
+output:
+  html_document:
+    df_print: paged
+    code_folding: hide
+    keep_md: yes
+    fig_caption: yes
+    toc: TRUE
+    toc_float: TRUE
+csl: plos-one.csl
+---
+
+# Introduction
+We use an optode to measure [O2] µmol l-1 in suspensions of phytoplankton.
+Changes in [O2] reflect (hopefully) oxygen evolution or oxygen consumption by the cell suspension.
+
+# Materials and Methods
+
+This .Rmd Rworkbook imports multiple parallel data files in simple .txt .tsv form exported from FireSting optodes based upon project specific values for variables set by the user.
+
+It tidies and organizes the data.
+
+ 
+# Set Chunk Options
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(fig.path='Figs/')
+```
+
+```{r set project variables}
+
+Project <- "FluorO2"
+
+Run <- "SySlCCACaloxy"
+
+FileID <- "caloxy"
+DataIn <- file.path("..", "RawData", "Optode", Run)
+
+DataOut <- file.path("..", "ImportData", "Optode")
+
+FileEncode <- "UTF-8"
+Delimiter <- "\t"
+
+HeaderRows <- 13
+Comment <- "#"
+
+#Set URL for MetaData
+MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
+
+
+```
+
+```{r load libraries} 
+# libraries; Note check actual dependencies
+library(tidyverse)
+library(lubridate)
+library(broom)
+library(googlesheets4)
+library(googledrive)
+
+#library(knitr)
+#library(zoo)
+#library(tidyquant)
+```
+
+
+```{r set colours}
+#Setting a vector of wavelength values, then using it to 'name' a vector of R colour values will allow us to assign colours to wavelengths later
+Wavelengths_nm = c(445, 470, 505, 535, 590)
+Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
+
+
+names(Colours_nm) <- Wavelengths_nm
+Colours_nm
+
+
+```
+
+Read in MetaData catalog
+```{r load catalog from googlesheet}
+
+gs4_deauth() #deauthorizes access to googlesheet
+
+MetaDataCatalog <- read_sheet(MetaDataURL) %>%
+  drop_na(WL) %>%
+  mutate(WL = unlist(WL))
+
+# # sheet is read in by sheet ID, obtained from the URL of the sheet.
+# # read_sheet sets the type of columns it can't parse to a list.
+# # ggplot/dplyr does not work well with a dataframe of lists.
+# # In this case WL is set to a list since some values are numbers, some are strings, some are blank.
+# # To fix this, first drop all rows missing WL, then unlist.
+# # Must first drop NA rows since unlist will collapse NULL lists, then the unlisted WL is a shorter length than original WL column, which mutate doesn't like.
+# 
+ 
+ head(as.data.frame(MetaDataCatalog))
+```
+
+List O2 data files
+```{r O2Data files}
+
+O2DataFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = FALSE)
+
+O2DataFiles
+
+O2DataFiles <-  grep('txt', O2DataFiles, value = TRUE, invert = FALSE)
+
+#only retain .txt files
+length(O2DataFiles)
+O2DataFiles
+
+```
+
+We have a path to a folder that contains `r length(O2DataFiles)` saved in the .txt format we seek.
+This data set is big enough to be worth a bulk import, but small enough to handle.
+
+Create function read_tsv_plus adding file name and skips header rows to start reading file after string "Data" read.delim_plus or read_delim_plus adds filename and cdate, message=FALSE, warning=FALSE
+
+```{r create function to read data}
+read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  comment = Comment, skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
+    mutate(Filename = flnm,
+           Cdatetime = ymd_hms(file.info(flnm)$ctime))
+  }
+```
+
+```{r read optode data}
+
+# test <- c(1,2,3)
+# 
+# bob <- test %>%
+#   map(~. + 1)
+
+#tidy after map_df
+O2Data <- O2DataFiles %>%
+  map_df(~read_delim_plus(flnm = ., delimiter = Delimiter, headerrows = HeaderRows, fileencode = FileEncode)) %>%
+  select(
+    where(
+      ~!all(is.na(.x)) #remove columns of all na
+    )
+  ) %>%
+  select(
+    where(
+      ~!all(str_detect(.x, pattern = "---")) #remove columns containing only all "---"
+    )
+  ) %>%
+  select(-c(`(mbar)`, `(%)`,`('C)...15`,`Ch 1...18`,`Ch1...22`,`Ch1...26`)) %>%
+  rename(Time_hms = `Time (HH:MM:SS)`,
+         LR_s = `Time (s)`,
+         O2_umolL = `Ch1...5`,
+         Temp_C = `Ch 1...9`)
+
+#tidy inside map_df seems slower
+# O2Data2 <- O2DataFiles %>%
+#   map_df(~read_delim_plus(flnm = ., delimiter = Delimiter, headerrows = HeaderRows, fileencode = FileEncode) %>%
+#   select(
+#     where(
+#       ~!all(is.na(.x)) #remove columns of all na
+#     )
+#   ) %>%
+#   select(
+#     where(
+#       ~!all(str_detect(.x, pattern = "---")) #remove columns containing only all "---"
+#     )
+#   ) %>%
+#   select(-c(`(mbar)`, `(%)`,`('C)...15`,`Ch 1...18`,`Ch1...22`,`Ch1...26`)) %>%
+#   rename(Time_hms = `Time (HH:MM:SS)`,
+#          LR_s = `Time (s)`,
+#          O2_umolL = `Ch1...5`,
+#          Temp_C = `Ch 1...9`)
+#   )
+  
+head(O2Data)
+```
+
+Reads in O2Data files one after another; skips the header "notes" at the beginning of the data and begins to read each file after HeaderRows. Renames columns so there are no duplicates (.name_repair).
+
+There are multiple functions from baseR ('read.delim'), from Tidyverse ('read_delim') or from data.table ('fread') for reading in files; if one approach fails; try another.
+Pipe read files directly to cleaning steps; could do cleaning transforms within 'map_df' as well
+
+# Generate columns from Filename
+```{r generate columns from Filename}
+O2Data <- O2Data %>%
+  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/Optode/"),
+         Filename = str_remove(string = Filename, pattern = ".txt"),
+         Filename = str_remove(string = Filename, pattern = "caloxy_")) %>%
+  separate(Filename, into = c("Run", "FileDateTime", "Project", "CultureID", "Ex_WL", "GrowthLight"), sep = "([\\/\\_])", remove = FALSE)
+
+
+head(O2Data)
+```
+
+
+
+Fix column classes
+```{r fix column classes}
+colnames(O2Data)
+
+O2Data <- type_convert(O2Data) %>%
+  mutate(Ex_WL = as.factor(Ex_WL))
+
+head(O2Data)
+```
+
+```{r prelim plot}
+O2Data %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = O2_umolL)) +
+  theme_bw()
+
+O2Data %>%
+  filter(Date == "2022-04-06") %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  coord_cartesian(xlim = c(0,1200)) +
+  theme_bw()
+
+
+```
+
+
+```{r save O2Data}
+saveRDS(O2Data, file.path(DataOut, paste(Project, Run, "O2Data.Rds", sep = "_"), fsep = .Platform$file.sep))
+```
+
