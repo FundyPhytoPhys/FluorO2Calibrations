@@ -43,11 +43,7 @@ Project <- "FluorO2"
 DataOut <- file.path("..", "ImportData", "FRRf")
 CalibData <- file.path("..", "CalibrationData")
 
-Run <- "SySlCCACaloxy"
-
-#Move catalog to Googlesheets?
-#We need to figure out the catalog issue
-#CatalogPath <- file.path("~/Dropbox/MURIS/MURIS_catalog.csv")
+Run <- "SySlCCA"
 
 DataIn <- file.path("..", "RawData", "SolisenseSySl", Run, fsep = .Platform$file.sep)
 
@@ -89,31 +85,6 @@ ActPARCrossCal <- ActPARCrossCal |>
          Slope = `estimate_LIFT_Gen_Developer.cal`,
          #Intercept_SE = `std.error_(Intercept)`,
          Slope_SE = `std.error_LIFT_Gen_Developer.cal`)
-```
-
-```{r load local catalog, message = FALSE, warning = FALSE, echo=FALSE}
-#col_types specified for some columns as only the last few rows of a large dataset contained values for these columns and the values were not being read in properly
-#there is probably a more robust way to deal with this issue
-# MetaData <- read_csv("../MURIS_catalog.csv") %>%
-#   rename(CultureID = id)
-# 
-# MetaData <- MetaData %>%
-#   mutate(ExpSalinity = (((culture_inocul_L * source_salinity)+(media_inocul_L*salinity))/(culture_inocul_L+media_inocul_L)))
-# 
-# GrowthLong <- readRDS(file = file.path(DataFolder,paste(Project,FileIDAb, "GrowthLong.Rds", sep  = "_"),fsep = .Platform$file.sep)) %>%
-#   rename(CultureID = id, StartDateTimeInoc = datetime) %>%
-#   #filter(E_hours == '0') %>% #select only E-hour == 0, as starting point for plate inoculation and following Solisense-analyses
-#   filter(Wavelength %in% AbsWL) %>%
-#   mutate(ObsDate = format(StartDateTimeInoc, format = "%Y-%m-%d")) %>%
-#   mutate(ObsDate = ymd(ObsDate))
-# 
-# MetaGrowthData <- full_join(MetaData, GrowthLong) %>%
-#   filter(E_hours != 'NA')
-# 
-# MetaGrowthData <- MetaGrowthData %>%
-#   select(-c(OD, AvBlankOD, blank, plc, plc_vol)) %>%
-#   pivot_wider(values_from = CorrOD, names_from = Wavelength, names_prefix = "OD_")
-
 ```
 
 ```{r set colours}
@@ -300,7 +271,7 @@ Oxborough & Baker 1997 for Fo'
 ```{r estimate parameters}
 #think about nest_by and map?
 SolFitsTrim2 <- SolFitsTrim %>%
-  group_by(Filename, Run, Project, CultureID, Ex_WL) %>%
+  group_by(Filename, Project, Run, CultureID, Ex_WL, TempCont) %>%
   mutate(Fodark = Fo[1],
          Fmdark = Fm[1],
          Sigdark = Sig[1],

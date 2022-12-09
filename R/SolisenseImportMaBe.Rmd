@@ -39,17 +39,14 @@ knitr::opts_chunk$set(fig.path='Figs/')
 
 # Set Project Variables
 ```{r set project variables}
+#check ".." depending upon location of .Rmd
+
 Project <- "FluorO2"
-DataOut <- file.path("..", "ImportData", "FRRf")
+Run <- "MaBe"
+DataIn <- file.path("..",  "RawData", Run, "Solisense", fsep = .Platform$file.sep)
+
+DataOut <- file.path("..",  "ImportData", "FRRf")
 CalibData <- file.path("..", "CalibrationData")
-
-Run <- "SySlCCACaloxy"
-
-#Move catalog to Googlesheets?
-#We need to figure out the catalog issue
-#CatalogPath <- file.path("~/Dropbox/MURIS/MURIS_catalog.csv")
-
-DataIn <- file.path("..", "Solisense", Run, fsep = .Platform$file.sep)
 
 FileID <- "fit"
 
@@ -71,16 +68,12 @@ A2_m2 = 1E20
 library(tidyverse)
 library(lubridate)
 
-#https://googlesheets4.tidyverse.org/
-# library(googledrive)
-# library(googlesheets4)
-
 ```
 
 ```{r read ActPAR calibration files}
 #ActPARCal <- readRDS("~/Dropbox/CampbellLabProtocols/ChlorophyllFluorescence/SolisenseInformation/SolisenseInformation_DCCalibParam.Rds")
 
-ActPARCrossCal <- list.files(path = CalibData, full.names = TRUE)  %>%
+ActPARCrossCal <- list.files(path = CalibData, full.names = TRUE) %>%
        map_df(~readRDS(file  = .))
 
 #intercept set to 0 in lm in SolisenseInformation.Rproj/SolisenseCalibCompare.Rmd
@@ -89,31 +82,6 @@ ActPARCrossCal <- ActPARCrossCal |>
          Slope = `estimate_LIFT_Gen_Developer.cal`,
          #Intercept_SE = `std.error_(Intercept)`,
          Slope_SE = `std.error_LIFT_Gen_Developer.cal`)
-```
-
-```{r load local catalog, message = FALSE, warning = FALSE, echo=FALSE}
-#col_types specified for some columns as only the last few rows of a large dataset contained values for these columns and the values were not being read in properly
-#there is probably a more robust way to deal with this issue
-# MetaData <- read_csv("../MURIS_catalog.csv") %>%
-#   rename(CultureID = id)
-# 
-# MetaData <- MetaData %>%
-#   mutate(ExpSalinity = (((culture_inocul_L * source_salinity)+(media_inocul_L*salinity))/(culture_inocul_L+media_inocul_L)))
-# 
-# GrowthLong <- readRDS(file = file.path(DataFolder,paste(Project,FileIDAb, "GrowthLong.Rds", sep  = "_"),fsep = .Platform$file.sep)) %>%
-#   rename(CultureID = id, StartDateTimeInoc = datetime) %>%
-#   #filter(E_hours == '0') %>% #select only E-hour == 0, as starting point for plate inoculation and following Solisense-analyses
-#   filter(Wavelength %in% AbsWL) %>%
-#   mutate(ObsDate = format(StartDateTimeInoc, format = "%Y-%m-%d")) %>%
-#   mutate(ObsDate = ymd(ObsDate))
-# 
-# MetaGrowthData <- full_join(MetaData, GrowthLong) %>%
-#   filter(E_hours != 'NA')
-# 
-# MetaGrowthData <- MetaGrowthData %>%
-#   select(-c(OD, AvBlankOD, blank, plc, plc_vol)) %>%
-#   pivot_wider(values_from = CorrOD, names_from = Wavelength, names_prefix = "OD_")
-
 ```
 
 ```{r set colours}
@@ -171,15 +139,19 @@ head(SolFits)
 #Think of better ways to do this
 #"../Solisense/SySlCCACaloxy/PICO_202205181355_caloxy_SySl1246_535_LL_fit.csv"
 
+# Check Filename tidying and removals against actual file names
+#MURIS_202112100843_MaBe3729_590_TC after str_remove...
+
 SolFitsTrim <- SolFits %>% 
   filter(!grepl("----", DATE)) %>% # remove rows with "----"
   select(-c("RFID_User_Data", "Barcode_Data", "Lon", "Lat", "GPS_stat")) %>% # remove superfluous columns
   mutate(Filename = str_remove(string = Filename, pattern = ".csv"),
-         Filename = str_remove(string = Filename, pattern = "../Solisense/"),
-         Filename = str_remove(string = Filename, pattern = "_fit")) %>%
-  separate(Filename, into = c("SubProject", "Project", "RunDateTime", "exp", "CultureID", "Ex_WL", "Exp_Type",  "Refit"), sep = "([\\/\\_])", remove = FALSE) %>%
+         Filename = str_remove(string = Filename, pattern = "../RawData/MaBe/Solisense/"),
+         Filename = str_remove(string = Filename, pattern = "_caloxy"),
+         Filename = str_remove(string = Filename, pattern = "_refit_fit")) %>%
+  separate(Filename, into = c("Project", "RunDateTime", "CultureID", "Ex_WL","TempCont"), sep = "([\\/\\_])", remove = FALSE) %>%
   mutate(RunDateTime = ymd_hm(RunDateTime), 
-         TIME = as.character(TIME)) %>% #time-column may be read in as factor, and as.character changes it to numeric; using lubdridate::hms would only change the format to 13H 4M 2S but does not work later to merge into one DateTime-column
+         TIME = as.character(TIME)) %>% #time-column may be read in as factor, and as.character changes it to numeric; using lubridate::hms would only change the format to 13H 4M 2S but does not work later to merge into one DateTime-column
   rename(ObsDate = DATE,
          ObsTime = TIME,
          FvFm = "Fv/Fm") %>%
@@ -199,8 +171,8 @@ SolFitsTrim <- SolFits %>%
   relocate(CultureID, .before = ObsDate) 
 
 #for consistency add TempCont column
-SolFitsTrim <- SolFitsTrim %>%
-  mutate(TempCont = "TC")
+#SolFitsTrim <- SolFitsTrim %>%
+#  mutate(TempCont = "TC")
 ```
 
 
@@ -273,7 +245,7 @@ Oxborough & Baker 1997 for Fo'
 ```{r estimate parameters}
 #think about nest_by and map?
 SolFitsTrim2 <- SolFitsTrim %>%
-  group_by(CultureID, Ex_WL, TempCont) %>%
+  group_by(Filename, Project, CultureID, Ex_WL, TempCont) %>%
   mutate(Fodark = Fo[1],
          Fmdark = Fm[1],
          Sigdark = Sig[1],
@@ -285,6 +257,7 @@ SolFitsTrim2 <- SolFitsTrim %>%
          Sigmax = max(Sig, na.rm = TRUE),
          #aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
          aLHIIOxbomax = (Fmmax * FoOxbo)/(Fmmax - FoOxbo),
+         Sigmax_m2psii = Sigmax/A2_m2,
          Sig_m2psii = Sig/A2_m2,
          ActPARCorr_photonsm2s = ActPARCorr *  photons_umol,
          #Ctau1 = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (Tau1QA/us_s))),
@@ -302,13 +275,13 @@ SolFitsTrim2 <- SolFitsTrim %>%
          ETRqpOxbo = Sig_m2psii * qpOxbo * ActPARCorr_photonsm2s,
          #ETRGorbo = (1/TauAv[7])*((ActPARCorr*FvFm)/(ActPARCorr[7]*FvFm[7])) * us_s,
          TestTauAvSat = 1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)],
-         ETRGorbo = (1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])*((ActPARCorr_photonsm2s*FvFm)/(max(ActPARCorr_photonsm2s))*(FvFm[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])) * us_s,
+         #ETRGorbo = (1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])*((ActPARCorr_photonsm2s*FvFm)/(max(ActPARCorr_photonsm2s))*(FvFm[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])) * us_s,
                                                                                     #Pmax x scaling for change in yield and light
 #relies upon phiPSII which is not absolute in cyanos
-         JVPSII_ETRtauav_FoSig = ETRCtauav * Fomin/Sigmax, #Sigmax not converted A2_m2
-         JVPSII_ETRqpOxbo_FoSig = ETRqpOxbo * Fomin/Sigmax,
-         JVPSII_ETRtauav_aLHII_Sig = ETRCtauav * aLHIIOxbomax/Sigmax,
-         JVPSII_ETRqpOxbo_aLHII_Sig = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
+         JVPSII_ETRtauav_FoSig = ETRCtauav * Fomin/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_FoSig = ETRqpOxbo * Fomin/Sigmax_m2psii,
+         JVPSII_ETRtauav_aLHII_Sig = ETRCtauav * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_aLHII_Sig = ETRqpOxbo * aLHIIOxbomax/Sigmax_m2psii) %>%
   ungroup()
 
 ```
@@ -322,16 +295,6 @@ SolFitsTrim2 %>%
   #scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   theme_bw()
-
-SolFitsTrim2 %>%
-  filter(Dark1s == 0) %>%
-  ggplot() +
-  geom_point(aes(x = ActPARCorr, y = ETRqpOxbo, colour = as.factor(TempCont))) +
-  geom_point(aes(x = ActPARCorr, y = ETRGorbo), shape = "cross") +
-  #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
-  theme_bw()
-
 
 # SolFitsTrim %>%
 #   filter(Dark1s == 0) %>%
@@ -389,22 +352,11 @@ SolFitsTrim2 %>%
 
   #ETRGorbo works well for blue light but appears to fail for 590 nm; possible issue with low FV/FM with PBsome excitation?
 
-SolFitsTrim2 %>%
-  #filter(Dark1s == 0) %>%
-  ggplot() +
-  geom_point(aes(x = ETRCtauav, y = ETRGorbo, colour = as.factor(TempCont))) +
-  #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
-  #scale_colour_manual(values = Colours_nm) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
-  #coord_fixed(ratio = 1) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
-  theme_bw()
-
 ```
 
 
 ```{r save SolFitsTrim data}
-saveRDS(SolFitsTrim2, file.path(DataOut, paste(Project, RunDate, "SolFitsTrim.Rds", sep = "_"), fsep = .Platform$file.sep))
+saveRDS(SolFitsTrim2, file.path(DataOut, paste(Project, Run, "SolFitsTrim.Rds", sep = "_"), fsep = .Platform$file.sep))
 ```
 
 

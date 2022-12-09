@@ -39,10 +39,14 @@ Project <- "FluorO2"
 DataInO2 <- file.path("..","ImportData", "Optode")
 DataInFRRf <- file.path("..","ImportData", "FRRf")
 DataOut <- file.path("..", "FitData")
-#CatalogPath <- file.path("../MURIS/MURIS_catalog.csv")
-CatalogURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 
-Run <- "SySlCCACaloxy"
+#For MURIS project data; local copy take from "..Dropbox/MURIS/MURIS_catalog.csv"
+CatalogPath <- file.path("../Catalogs/MURIS_catalog.csv")
+
+#For PICO project data
+#CatalogURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
+
+Run <- "MaBeCaloxy"
 
 ```
 
@@ -80,17 +84,20 @@ Colours_nm
 This chunk reads in a MetaData catalog from googlesheets
 Optode Data already merged with MetaData but workflow needs a re-merger.
 ```{r load Catalog, now as a google sheet}
-gs4_deauth()
+# gs4_deauth()
+# 
+# MetaData <- read_sheet(CatalogURL) %>%
+#    drop_na(WL) %>%
+#    mutate(WL = unlist(WL))
+#  
+#  as.data.frame(MetaData)
 
-MetaData <- read_sheet(CatalogURL) %>%
-   drop_na(WL) %>%
-   mutate(WL = unlist(WL))
- 
- as.data.frame(MetaData)
+```
 
-
-
-
+This chunk reads in a locally stored catalog from .csv.
+Optode Data already merged with MetaData but workflow needs a re-merger.
+```{r load Catalog, local .csv}
+MetaData <- read_csv(CatalogPath)
 ```
 
 
