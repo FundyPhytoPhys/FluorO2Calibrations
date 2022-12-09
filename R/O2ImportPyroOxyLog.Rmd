@@ -22,7 +22,7 @@ Changes in [O2] reflect (hopefully) oxygen evolution or oxygen consumption by th
 
 # Materials and Methods
 
-This .Rmd Rworkbook imports multiple paralle data files in simple .txt .tsv form exported from FireSting optodes based upon project specific values for variables set by the user.
+This .Rmd Rworkbook imports multiple parallel data files in simple .txt .tsv form exported from FireSting optodes running under PyroScience Oxylog software, based upon project specific values for variables set by the user.
 
 It tidies and organizes the data.
 
@@ -49,10 +49,10 @@ knitr::opts_chunk$set(fig.path='Figs/')
 #"..", takes up a level in the directory path
 Project <- "FluorO2"
 
-Run <- "SySlCCACaloxy"
+Run <- "MaBe"
 
 FileID <- "caloxy"
-DataIn <- file.path("..", "RawData", "Optode", Run)
+DataIn <- file.path("..", "RawData", Run, "Optode")
 DataOut <- file.path("..","ImportData", "Optode")
 #MetaCatalog <- file.path("..","PicoCatalog.csv")
 
@@ -64,7 +64,10 @@ HeaderRows = 13
 Comment <- "#"
 
 #Set URL for MetaData
-MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
+# MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
+
+#Set local file path for local MetaData
+MetaDataPath <- file.path("..", "Catalogs", "MURIS_catalog.csv") 
 ```
 
 ```{r load libraries} 
@@ -75,16 +78,12 @@ library(broom)
 library(googlesheets4)
 library(googledrive)
 
-#library(knitr)
-#library(zoo)
-#library(tidyquant)
 ```
 
 ```{r set colours}
 #Setting a vector of wavelength values, then using it to 'name' a vector of R colour values will allow us to assign colours to wavelengths later
 Wavelengths_nm = c(445, 470, 505, 535, 590)
 Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
-
 
 names(Colours_nm) <- Wavelengths_nm
 Colours_nm
@@ -97,7 +96,7 @@ MetaData for each culture was entered manually; including a serial SampleID (ex.
  gs4_deauth()
 # #deauthorizes access to googlesheet
 # 
- MetaCatalog <- read_sheet(MetaDataURL) %>%
+ MetaData <- read_sheet(MetaDataURL) %>%
 # # sheet is read in by sheet ID, obtained from the URL of the sheet.
 # # read_sheet sets the type of columns can't parse to a list.
 # # ggplot/dplyr does not work well with a dataframe of lists.
@@ -111,7 +110,12 @@ MetaData for each culture was entered manually; including a serial SampleID (ex.
  as.data.frame(MetaCatalog)
 ```
 
-listing the names of the oxygen data, path stored in variable DataIn.
+This chunk reads in MetaData stored locally as .csv, for MURIS MABE project
+```{r read local MetaData}
+MetaData <- read_csv(MetaDataPath)
+```
+
+Listing the names of the oxygen data, path stored in variable DataIn.
 ```{r O2Data files}
 
 #recursive = TRUE sets function to go down directory path; recursive = FALSE will only read files at the level of the assigned directory, not in sub-folders
@@ -129,7 +133,6 @@ O2DataFiles
 ```
 
 We have a path to a folder that contains `r length(O2DataFiles)` saved in the .txt format we seek.
-This data set is big enough to be worth a bulk import, but small enough to handle.
 
 Create function read_tsv_plus adding file name and skips header rows to start reading file after string "Data" read.delim_plus or read_delim_plus adds filename and cdate, message=FALSE, warning=FALSE
 
@@ -183,13 +186,15 @@ head(O2Data)
 
 #Generate columns from Filename
 ```{r generate columns from Filename}
-#"../RawData/Optode/SySlCCACaloxy/202205181355_PICO_caloxy_SySl1246_535_LL.txt"
+#"../RawData/MaBe/Optode/202112100842_MURIS_caloxy_MaBe3729_AL590_Ex590_TC.txt"
 
 O2Data <- O2Data %>%
-  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/Optode/"),
+  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MaBe/Optode/"),
          Filename = str_remove(string = Filename, pattern = ".txt"),
-         Filename = str_remove(string = Filename, pattern = "caloxy_")) %>%
-  separate(Filename, into = c("Run", "FileDateTime", "Project", "CultureID", "Ex_WL", "GrowthLight"), sep = "([\\/\\_\\.])", remove = FALSE) %>%
+         Filename = str_remove(string = Filename, pattern = "caloxy_"),
+         Filename = str_remove(string = Filename, pattern = "AL"),
+         Filename = str_remove(string = Filename, pattern = "Ex")) %>%
+  separate(Filename, into = c("FileDateTime", "Project", "CultureID", "Al_WL", "Ex_WL", "TempCont"), sep = "([\\/\\_\\.])", remove = FALSE) %>%
   mutate(FileDateTime = parse_date_time(as.character(FileDateTime), orders = "ymdHM")) %>%
   separate(FileDateTime, into = c("ObsDate", "ObsTime"), sep = "([ ])", remove = FALSE) %>%
   mutate(ObsDate = ymd(ObsDate),
@@ -197,15 +202,16 @@ O2Data <- O2Data %>%
 
 head(O2Data)
 
-#for compatibility add TempCont column
-O2Data <- O2Data %>%
-  mutate(TempCont = "TC")
+#for compatibility add TempCont column if missing
+# O2Data <- O2Data %>%
+#   mutate(TempCont = "TC")
 
 ```
 
 Fix column classes
 ```{r fix column classes}
 O2Data <- type_convert(O2Data) %>%
+  mutate(Ex_WL = as.factor(Ex_WL)) %>%
   mutate(Ex_WL = as.factor(Ex_WL))
 
 head(O2Data)
