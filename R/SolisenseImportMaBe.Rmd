@@ -172,7 +172,7 @@ SolFitsTrim <- SolFits %>%
 
 #for consistency add TempCont column
 SolFitsTrim <- SolFitsTrim %>%
-  mutate(TempCont = "TC")
+  mutate(TempCont = "noTC")
 ```
 
 

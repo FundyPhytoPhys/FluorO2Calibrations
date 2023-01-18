@@ -114,8 +114,9 @@ head(FRRfData)
   #FRRf refit includes data from both dates
 #RunDateOxy <- 20211210
   #20211213 alternate date
-Cuvette <- "TC"
 #StrainID <- "MaBe3729"
+#TempCont <- "noTC"
+
 
 ```
 
@@ -124,7 +125,7 @@ Cuvette <- "TC"
 ```{r filter FRRfData}
 FRRfDataLight <- FRRfData %>%
   filter(!is.na(LR_s)) %>%
-  filter(TempCont == Cuvette) %>%
+  filter(TempCont == "noTC") %>%
   #filter(CultureID == StrainID) %>%
   filter(Dark1s == 0)
 
@@ -139,7 +140,7 @@ Make this more general as we accumulate more files.
 #temporary hack to cope with run date; replace with GREP? or map?
 O2Data <- readRDS(file = file.path(DataInO2, paste("FluorO2_", Run, "_O2Data.Rds", sep = "")))
 
-head(O2Data)
+colnames(O2Data)
 ```
 
 
@@ -154,10 +155,10 @@ O2Data <- O2Data %>%
    #      ObsTime = as.period(AbsTime),
     #     Ex_WL = as.factor(Ex_WL))
 
-head(O2Data)
+colnames(O2Data)
 
 O2Data <- O2Data %>%
-  mutate(TempCont = "TC")
+  mutate(TempCont = "noTC")
 ```
 
 ```{r prelimplot O2}
@@ -177,7 +178,7 @@ O2Data %>%
 Draw plot from two dataframes
 ```{r two dataframe plot}
 ggplot() +
-  #geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRqpOxbo), colour = "black") +
   facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
@@ -201,12 +202,92 @@ head(O2SlopeData)
 
 ```{r O2FRRfprelimplot}
 O2SlopeData %>%
-  #filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = LR_sO2, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(aes(x = LR_sO2, y = ActPAR), colour = "black") +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = LR_s, y = ActPAR), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
 
+```
+
+Interpolate ActPAR estimates across entire time axis
+```{r interpolate FRRf estimates}
+#http://publish.illinois.edu/spencer-guerrero/2014/12/11/2-dealing-with-missing-data-in-r-omit-approx-or-spline-part-1/
+#https://dplyr.tidyverse.org/dev/articles/colwise.html
+#Interpolation causes problems with final rows that repeat last value.
+
+interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = TRUE, type = "l", maxgap = Inf)}
+
+O2SlopeData <- O2SlopeData %>%
+  mutate(ActPARinter = interpolate(ActPAR),
+         LR_sinter = interpolate(LR_s), .after = Temp_C)
+         
+```
+
+Check whether ActPARinter worked properly
+```{r O2FRRfprelimplot2}
+O2SlopeData %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = LR_s, y = ActPARinter), colour = "black") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+#filter CultureID with negative O2slope throughout and with aberrant ActPARinter
+#recheck with Max about FRRf file processing to recuperate ActPARinter
+O2SlopeData %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = LR_s, y = ActPARinter), colour = "black") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+```
+
+Estimate O2 slopes over LR PAR step ranges
+Be careful with nesting!  Multiple steps at single ActPARinter
+Filter out first 30 s of each ActPARinter set to skip 'induction' phase.
+Filter out last 5 s to avoid Dark1s = 1 rows
+```{r O2slopes}
+induction_s = 35
+end_s = 175
+#, LR_sinter
+
+O2Slopes <- O2SlopeData %>%
+  nest(O2data = -c(Date, CultureID, Ex_WL, FilenameO2, ActPARinter)) %>% 
+  mutate(O2lm = map(O2data,  possibly(~ lm(O2_umolL[induction_s:end_s] ~ as.numeric(LR_s[induction_s:end_s]), data = .x), otherwise = NULL)),
+         O2lm_tidy = map(O2lm, possibly(tidy, otherwise = NULL))) %>%
+  select(-c(O2data, O2lm)) %>%
+  unnest(cols = O2lm_tidy) %>%
+  filter(term  != "(Intercept)") %>%
+  select(-term) %>%
+  rename(O2_umolLs = estimate) %>%
+  group_by(Date, FilenameO2, CultureID, Ex_WL) %>% #careful with group_by; this only works with a single replication of each LR
+  mutate(O2evln_O2ls = (O2_umolLs - min(O2_umolLs)) * 6.022e17) %>%
+  ungroup()
+
+#Decide how to handle subtraction of dark O2 slopes to estimate gross O2 evln
+#mutate(O2evln_O2ls_ALT = (O2_umolLs - mean(O2_umolLs[1], O2_umolLs[5]))) %>%
+ #- (mean(O2_umolLs[1],O2_umolLs[5])))*6.022e17
+```
+
+
+```{r O2slopeplots}
+
+O2Slopes %>%
+  ggplot() +
+  geom_line(aes(x = ActPARinter, y = O2_umolLs, colour = Ex_WL)) +
+    scale_colour_manual(values = Colours_nm) +
+    facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
+    theme_bw()
+
+O2Slopes %>%
+  ggplot() +
+  geom_line(aes(x = ActPARinter, y = O2evln_O2ls, colour = Ex_WL)) +
+    scale_colour_manual(values = Colours_nm) +
+    facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
+    theme_bw()
 ```
