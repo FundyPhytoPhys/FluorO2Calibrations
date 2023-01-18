@@ -88,13 +88,11 @@ ActPARCrossCal <- ActPARCrossCal |>
 Wavelengths_nm = c(445, 470, 505, 535, 590)
 Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
 
-
 names(Colours_nm) <- Wavelengths_nm
 Colours_nm
-
 ```
 
-```{r list PSI files for file import}
+```{r list files for file import}
 SolisenseFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = FALSE)
 SolisenseFiles
 
@@ -132,6 +130,8 @@ SolFits <- SolisenseFiles %>%
   map_df(~read_delim_plus(flnm =., delimiter = Delimiter, headerrows = HeaderRows, fileencode = FileEncode))
 
 head(SolFits)
+
+colnames(SolFits)
 ```
 
 
@@ -144,7 +144,7 @@ head(SolFits)
 
 SolFitsTrim <- SolFits %>% 
   filter(!grepl("----", DATE)) %>% # remove rows with "----"
-  select(-c("RFID_User_Data", "Barcode_Data", "Lon", "Lat", "GPS_stat")) %>% # remove superfluous columns
+  select(-c("RFID_User_Data", "Barcode_Data", "PIF", "Lon", "Lat", "GPS_stat", "...39")) %>% # remove superfluous columns
   mutate(Filename = str_remove(string = Filename, pattern = ".csv"),
          Filename = str_remove(string = Filename, pattern = "../RawData/MaBe/Solisense/"),
          Filename = str_remove(string = Filename, pattern = "_caloxy"),
@@ -171,8 +171,8 @@ SolFitsTrim <- SolFits %>%
   relocate(CultureID, .before = ObsDate) 
 
 #for consistency add TempCont column
-#SolFitsTrim <- SolFitsTrim %>%
-#  mutate(TempCont = "TC")
+SolFitsTrim <- SolFitsTrim %>%
+  mutate(TempCont = "TC")
 ```
 
 
