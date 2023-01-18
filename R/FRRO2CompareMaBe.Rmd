@@ -46,7 +46,7 @@ CatalogPath <- file.path("../Catalogs/MURIS_catalog.csv")
 #For PICO project data
 #CatalogURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 
-Run <- "MaBeCaloxy"
+Run <- "MaBe"
 
 ```
 
@@ -74,10 +74,8 @@ library(googledrive)
 Wavelengths_nm = c(445, 470, 505, 535, 590)
 Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
 
-
 names(Colours_nm) <- Wavelengths_nm
 Colours_nm
-
 ```
 
 
@@ -102,8 +100,8 @@ MetaData <- read_csv(CatalogPath)
 
 
 ```{r read FRRf data across all runs}
-#Temporary RunDate during auditing
 #Run <- "SySlCCACaloxy"
+#Run <- "MaBe"
 FRRfData <- readRDS(file = file.path(DataInFRRf, paste("FluorO2_", Run, "_SolFitsTrim.Rds", sep = "")))
 
 head(FRRfData)
@@ -179,21 +177,36 @@ O2Data %>%
 Draw plot from two dataframes
 ```{r two dataframe plot}
 ggplot() +
-  geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRCtauav), colour = "black") +
-  facet_grid(rows = vars(CultureID), cols = vars(Ex_WL)) +
+  #geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRqpOxbo), colour = "black") +
+  facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   coord_cartesian(xlim = c(0, 1200))
 ```
-
-
 
 
 ```{r leftjoin}
 colnames(O2Data)
 colnames(FRRfDataLight)
 
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("Project", "Run", "CultureID", "Ex_WL", "GrowthLight", "TempCont", "Date" = "ObsDate","LR_s"), suffix = c("O2", "FRRf"), keep = FALSE)
+FRRfDataLight <- FRRfDataLight %>% 
+  mutate(Date = ymd(ObsDate))
+
+#removed some columns missing from O2Data
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("CultureID", "Ex_WL",  "TempCont", "Date","LR_s"), suffix = c("O2", "FRRf"), keep = FALSE)
 
 head(O2SlopeData)
+```
+
+
+```{r O2FRRfprelimplot}
+O2SlopeData %>%
+  #filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x = LR_sO2, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = LR_sO2, y = ActPAR), colour = "black") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
 ```
