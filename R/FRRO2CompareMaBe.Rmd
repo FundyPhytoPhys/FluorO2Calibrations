@@ -194,18 +194,22 @@ FRRfDataLight <- FRRfDataLight %>%
   mutate(Date = ymd(ObsDate))
 
 #removed some columns missing from O2Data
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("CultureID", "Ex_WL",  "TempCont", "Date","LR_s"), suffix = c("O2", "FRRf"), keep = FALSE)
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("CultureID", "Ex_WL", "TempCont", "Date", "LR_s"), suffix = c("O2", "FRRf"), keep = FALSE) %>%
+  select(-c("Dark1s", "nm470":"IRCorr"))
 
-head(O2SlopeData)
+#O2SlopeData <- left_join(x = O2Data, y = FRRfData, by = c(c("Date" = "ObsDate"), c("AbsTime" = "ObsTime"), "CultureID", "Ex_WL"), suffix = c("O2", "FRRf"), keep = FALSE) %>%
+#  select(c("Date":"Act_PAR", "ActPAR_photonsm2s"))
+
+colnames(O2SlopeData)
 ```
 
-
+O2 curves from 2021-12-03 have no matching FRRf data!
 ```{r O2FRRfprelimplot}
 O2SlopeData %>%
   ggplot() +
-  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(aes(x = LR_s, y = ActPAR), colour = "black") +
-  scale_colour_manual(values = Colours_nm) +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = as.factor(Date))) +
+  geom_jitter(aes(x = LR_s, y = ActPAR, colour = as.factor(Date))) +
+  #scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
 
@@ -257,7 +261,7 @@ end_s = 175
 #, LR_sinter
 
 O2Slopes <- O2SlopeData %>%
-  nest(O2data = -c(Date, CultureID, Ex_WL, FilenameO2, ActPARinter)) %>% 
+  nest(O2data = -c(ProjectO2, Date, CultureID, FilenameO2,  Al_WL, Ex_WL, TempCont, ActPARinter, )) %>% 
   mutate(O2lm = map(O2data,  possibly(~ lm(O2_umolL[induction_s:end_s] ~ as.numeric(LR_s[induction_s:end_s]), data = .x), otherwise = NULL)),
          O2lm_tidy = map(O2lm, possibly(tidy, otherwise = NULL))) %>%
   select(-c(O2data, O2lm)) %>%
