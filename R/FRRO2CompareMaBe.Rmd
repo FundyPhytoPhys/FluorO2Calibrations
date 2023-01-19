@@ -225,10 +225,14 @@ O2SlopeData %>%
 Interpolate ActPAR estimates across entire time axis
 ```{r interpolate FRRf estimates}
 #http://publish.illinois.edu/spencer-guerrero/2014/12/11/2-dealing-with-missing-data-in-r-omit-approx-or-spline-part-1/
-#https://dplyr.tidyverse.org/dev/articles/colwise.html
 #Interpolation causes problems with final rows that repeat last value.
 
-interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = TRUE, type = "l", maxgap = Inf)}
+O2SlopeData <- O2SlopeData |>
+  filter(LR_s < 1000)
+
+#type = "l",
+
+interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = FALSE,  maxgap = Inf)}
 
 O2SlopeData <- O2SlopeData %>%
   mutate(ActPARinter = interpolate(ActPAR),
@@ -237,23 +241,26 @@ O2SlopeData <- O2SlopeData %>%
 ```
 
 Check whether ActPARinter worked properly
-```{r O2FRRfprelimplot2}
-O2SlopeData %>%
-  ggplot() +
-  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(aes(x = LR_s, y = ActPARinter), colour = "black") +
-  scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
-  theme_bw()
 
+Issues with:
+All runs start with ActPARinter > 0, or 0 for only a very short time.
+possible that ActPARinter is displaced leftwards to lower LR_s values than appropriate
+  Fixed by setting 'fromLast = FALSE' in zoo::na.locf and removing unused 'type = "l" argument
+
+MaBe3729, noTC, 445, 2021-12-13  ActPARinter = 0 throughout
+MaBe3729, noTC, 590, 2021-12-13  ActPARinter only goes to 90
+
+OK otherwise
+
+```{r O2FRRfprelimplot2}
 #filter CultureID with negative O2slope throughout and with aberrant ActPARinter
 #recheck with Max about FRRf file processing to recuperate ActPARinter
-O2SlopeData %>%
+O2SlopeDataFilter %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARinter), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  facet_grid(rows = vars(Ex_WL, Date), cols = vars(CultureID, TempCont)) +
   theme_bw()
 
 ```
@@ -265,9 +272,12 @@ Filter out last 5 s to avoid Dark1s = 1 rows
 ```{r O2slopes}
 induction_s = 35
 end_s = 175
-#, LR_sinter
 
-O2Slopes <- O2SlopeData %>%
+#For now filter out issues with ActPARinter
+O2SlopeDataFilter <- O2SlopeData %>%
+  filter(!(CultureID == "MaBe3729" & TempCont == "noTC" & Date == "2021-12-13"))
+
+O2Slopes <- O2SlopeDataFilter %>%
   nest(O2data = -c(ProjectO2, Date, CultureID, FilenameO2,  Al_WL, Ex_WL, TempCont, ActPARinter, )) %>% 
   mutate(O2lm = map(O2data,  possibly(~ lm(O2_umolL[induction_s:end_s] ~ as.numeric(LR_s[induction_s:end_s]), data = .x), otherwise = NULL)),
          O2lm_tidy = map(O2lm, possibly(tidy, otherwise = NULL))) %>%
@@ -292,13 +302,13 @@ O2Slopes %>%
   ggplot() +
   geom_line(aes(x = ActPARinter, y = O2_umolLs, colour = Ex_WL)) +
     scale_colour_manual(values = Colours_nm) +
-    facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
+    facet_grid(cols = vars(CultureID, Date), rows = vars(Ex_WL, TempCont)) +
     theme_bw()
 
 O2Slopes %>%
   ggplot() +
   geom_line(aes(x = ActPARinter, y = O2evln_O2ls, colour = Ex_WL)) +
     scale_colour_manual(values = Colours_nm) +
-    facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
+    facet_grid(cols = vars(CultureID, Date), rows = vars(Ex_WL, TempCont)) +
     theme_bw()
 ```
