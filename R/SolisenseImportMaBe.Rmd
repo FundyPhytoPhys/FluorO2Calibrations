@@ -48,7 +48,7 @@ DataIn <- file.path("..",  "RawData", Run, "Solisense", fsep = .Platform$file.se
 DataOut <- file.path("..",  "ImportData", "FRRf")
 CalibData <- file.path("..", "CalibrationData")
 
-FileID <- "fit"
+FileID <- "refit_fit"
 
 FileEncode <- "UTF-8" 
 Delimiter <- ","
@@ -67,7 +67,6 @@ A2_m2 = 1E20
 ```{r load libraries}
 library(tidyverse)
 library(lubridate)
-
 ```
 
 ```{r read ActPAR calibration files}
@@ -105,9 +104,10 @@ unique(duplicated(SolisenseFiles))
 #design choice 2 file reading functions or add a filetype variable to a single function
 #stringsAsFactors =FALSE somewhere? 
 
-read.delim_plus <- function(flnm, file_encode, delimiter, header_rows){read.delim(flnm, fileEncoding = file_encode, sep = delimiter,  skip = header_rows, row.names = NULL) %>% mutate(filename = flnm, cdatetime = ymd_hms(file.info(flnm)$ctime))
-}
+# read.delim_plus <- function(flnm, file_encode, delimiter, header_rows){read.delim(flnm, fileEncoding = file_encode, sep = delimiter,  skip = header_rows, row.names = NULL) %>% mutate(filename = flnm, cdatetime = ymd_hms(file.info(flnm)$ctime))
+# }
 
+#"id" parameter of read_delim might replace read_delim_plus
 #a read function using tidyverse::read_delim that skips a fixed number of header rows, and adds columns to the dataframe containing the filename and the file creation date time.
 read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
     mutate(Filename = flnm,
@@ -170,9 +170,9 @@ SolFitsTrim <- SolFits %>%
   relocate(ObsDateTime, .after = ObsTime) %>%
   relocate(CultureID, .before = ObsDate) 
 
-#for consistency add TempCont column
-SolFitsTrim <- SolFitsTrim %>%
-  mutate(TempCont = "noTC")
+#for consistency add TempCont column only for Sylwia data
+# SolFitsTrim <- SolFitsTrim %>%
+#   mutate(TempCont = "noTC")
 ```
 
 
@@ -195,18 +195,22 @@ SolFitsTrim <- SolFitsTrim |>
           IRCorr = case_when(TempCont == "TC" ~ IR * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "PwrIR_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
                                  TempCont == "noTC" ~ IR * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "PwrIR_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]))
 
-
 SolFitsTrim <- SolFitsTrim %>%
   mutate(across(.cols = c(Light_1:ETR), .fns = as.numeric)) %>%
   mutate(ActPAR = nm445 + nm470 + nm505 + nm535 + nm590 + IR) |>
   mutate(ActPARCorr = nm445Corr + nm470Corr + nm505Corr + nm535Corr + nm590Corr + IRCorr)#better ways to do this?
 
+```
 
+
+
+```{r LR_s}
 #generate column with duration of light step in s
 #add a column adding Dark1s based upon any step < 5 s
 #replace NA for first dark with nominal 181;  issue will be changing durations of light steps across each run
+
 SolFitsTrim <- SolFitsTrim %>%
-  group_by(CultureID, Ex_WL) %>%
+  group_by(CultureID, ObsDate, Ex_WL) %>%
   #mutate(Step_s = as.numeric(ObsDateTime - lag(ObsDateTime)), .after = ObsDateTime) %>%
   mutate(Step_s = replace_na(as.numeric(ObsDateTime - lag(ObsDateTime)), 181), .after = ObsDateTime) %>% 
   mutate(LR_s = as.numeric(ObsDateTime - ObsDateTime[1]), .after = Step_s) %>%
@@ -245,7 +249,7 @@ Oxborough & Baker 1997 for Fo'
 ```{r estimate parameters}
 #think about nest_by and map?
 SolFitsTrim2 <- SolFitsTrim %>%
-  group_by(Filename, Project, CultureID, Ex_WL, TempCont) %>%
+  group_by(Filename, Project, ObsDate, CultureID, Ex_WL, TempCont) %>%
   mutate(Fodark = Fo[1],
          Fmdark = Fm[1],
          Sigdark = Sig[1],
@@ -293,7 +297,7 @@ SolFitsTrim2 %>%
   geom_point(aes(x = ActPARCorr, y = aLHIIOxbomax, colour = as.factor(TempCont))) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 # SolFitsTrim %>%
@@ -313,7 +317,7 @@ SolFitsTrim2 %>%
   geom_point(aes(x = Ctauav, y = qpOxbo, colour = as.factor(TempCont))) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   coord_fixed(xlim = c(0,1), ylim = c(0,1), ratio = 1) +
   theme_bw()
@@ -324,7 +328,7 @@ SolFitsTrim2 %>%
   geom_point(aes(x = ActPARCorr, y = JVPSII_ETRtauav_FoSig, colour = as.factor(TempCont))) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 SolFitsTrim2 %>%
@@ -336,7 +340,7 @@ SolFitsTrim2 %>%
   #scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   coord_fixed(ratio = 1) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 SolFitsTrim2 %>%
@@ -347,7 +351,7 @@ SolFitsTrim2 %>%
   #scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
   #ETRGorbo works well for blue light but appears to fail for 590 nm; possible issue with low FV/FM with PBsome excitation?
