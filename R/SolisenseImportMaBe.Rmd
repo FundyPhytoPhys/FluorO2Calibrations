@@ -210,7 +210,7 @@ SolFitsTrim <- SolFitsTrim %>%
 #replace NA for first dark with nominal 181;  issue will be changing durations of light steps across each run
 
 SolFitsTrim <- SolFitsTrim %>%
-  group_by(CultureID, ObsDate, Ex_WL) %>%
+  group_by(CultureID, ObsDate, Ex_WL, TempCont) %>%
   #mutate(Step_s = as.numeric(ObsDateTime - lag(ObsDateTime)), .after = ObsDateTime) %>%
   mutate(Step_s = replace_na(as.numeric(ObsDateTime - lag(ObsDateTime)), 181), .after = ObsDateTime) %>% 
   mutate(LR_s = as.numeric(ObsDateTime - ObsDateTime[1]), .after = Step_s) %>%
@@ -232,7 +232,7 @@ SolFitsTrim %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = Tau2QA, colour = as.factor(TempCont), size = LR_s)) +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 SolFitsTrim %>%
@@ -240,7 +240,7 @@ SolFitsTrim %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = Alp2QA, colour = as.factor(TempCont), size = LR_s)) +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw() 
 
 ```
@@ -294,10 +294,19 @@ SolFitsTrim2 <- SolFitsTrim %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = ActPARCorr, y = aLHIIOxbomax, colour = as.factor(TempCont))) +
+  geom_point(aes(x = ActPARCorr, y = aLHIIOxbomax)) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
+  theme_bw()
+
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = aLHIIOxbomax)) +
+  #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
+  #scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 # SolFitsTrim %>%
@@ -314,10 +323,10 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = Ctauav, y = qpOxbo, colour = as.factor(TempCont))) +
+  geom_point(aes(x = Ctauav, y = qpOxbo)) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   coord_fixed(xlim = c(0,1), ylim = c(0,1), ratio = 1) +
   theme_bw()
@@ -325,33 +334,33 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRtauav_FoSig, colour = as.factor(TempCont))) +
+  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRtauav_FoSig)) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = 
-         JVPSII_ETRqpOxbo_FoSig, y = JVPSII_ETRtauav_aLHII_Sig, colour = as.factor(TempCont))) +
+         JVPSII_ETRqpOxbo_FoSig, y = JVPSII_ETRtauav_aLHII_Sig)) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   coord_fixed(ratio = 1) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x =  JVPSII_ETRqpOxbo_FoSig, y = JVPSII_aLHIIOxbomax, colour = as.factor(TempCont))) +
+  geom_point(aes(x =  JVPSII_ETRqpOxbo_FoSig, y = JVPSII_aLHIIOxbomax)) +
   #geom_point(aes(x = ActPARCorr, y = aLHIIminmax), shape = "cross") +
   #scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, ObsDate)) +
   theme_bw()
 
   #ETRGorbo works well for blue light but appears to fail for 590 nm; possible issue with low FV/FM with PBsome excitation?
