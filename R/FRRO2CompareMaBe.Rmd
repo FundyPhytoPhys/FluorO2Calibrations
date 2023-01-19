@@ -125,12 +125,7 @@ head(FRRfData)
 ```{r filter FRRfData}
 FRRfDataLight <- FRRfData %>%
   filter(!is.na(LR_s)) %>%
-  filter(TempCont == "noTC") %>%
-  #filter(CultureID == StrainID) %>%
   filter(Dark1s == 0)
-
-#%>%
-#  filter(ObsDate == ymd(RunDateOxy))
 
 ```
 
@@ -166,7 +161,7 @@ O2Data %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(CultureID), cols = vars(Ex_WL)) +
+  facet_grid(rows = vars(CultureID, ObsDate), cols = vars(Ex_WL, TempCont)) +
   xlim(0, 1000) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
@@ -177,10 +172,16 @@ O2Data %>%
 
 Draw plot from two dataframes
 ```{r two dataframe plot}
+FRRfDataLight %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = FvFm)) +
+  facet_grid(rows = vars(CultureID, Date), cols = vars(Ex_WL, TempCont)) +
+  scale_colour_manual(values = Colours_nm)
+
 ggplot() +
-  geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRqpOxbo), colour = "black") +
-  facet_grid(cols = vars(CultureID), rows = vars(Ex_WL)) +
+  #geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL)) +
+  geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRqp)) +
+  facet_grid(rows = vars(CultureID, Date), cols = vars(Ex_WL, TempCont)) +
   scale_colour_manual(values = Colours_nm) +
   coord_cartesian(xlim = c(0, 1200))
 ```
@@ -193,8 +194,10 @@ colnames(FRRfDataLight)
 FRRfDataLight <- FRRfDataLight %>% 
   mutate(Date = ymd(ObsDate))
 
+#LR_s
+
 #removed some columns missing from O2Data
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("CultureID", "Ex_WL", "TempCont", "Date", "LR_s"), suffix = c("O2", "FRRf"), keep = FALSE) %>%
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("Date", "CultureID", "Ex_WL", "TempCont", "LR_s"), suffix = c("O2", "FRRf"), keep = FALSE) %>%
   select(-c("Dark1s", "nm470":"IRCorr"))
 
 #O2SlopeData <- left_join(x = O2Data, y = FRRfData, by = c(c("Date" = "ObsDate"), c("AbsTime" = "ObsTime"), "CultureID", "Ex_WL"), suffix = c("O2", "FRRf"), keep = FALSE) %>%
@@ -202,17 +205,25 @@ O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("CultureID", "Ex_
 
 colnames(O2SlopeData)
 ```
+Fixed:
+O2 curves from 2021-12-13 have no matching FRRf data in O2SlopeData even though FRRfDataLight$Date has both "2021-12-10" "2021-12-13"!
 
-O2 curves from 2021-12-03 have no matching FRRf data!
+O2 and FRRf runs with/without TC
+Issue with LR_s estimate for 2021-12-13
+
+Issue:
+join by LR_s misses some FRRf data; issue with calculation?
+
+1/2 of LR_s estimates off by ~2400 s
 ```{r O2FRRfprelimplot}
 O2SlopeData %>%
+  #filter(Date == "2021-12-13" ) %>%
   ggplot() +
-  geom_point(aes(x = LR_s, y = O2_umolL, colour = as.factor(Date))) +
-  geom_jitter(aes(x = LR_s, y = ActPAR, colour = as.factor(Date))) +
+  geom_point(aes(x = LR_s, y = O2_umolL)) +
+  geom_point(aes(x = LR_s, y = ActPARCorr)) +
   #scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  facet_grid(cols = vars(Ex_WL, TempCont), rows = vars(CultureID, Date)) +
   theme_bw()
-
 ```
 
 Interpolate ActPAR estimates across entire time axis
