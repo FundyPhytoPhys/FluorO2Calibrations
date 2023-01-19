@@ -267,7 +267,7 @@ O2SlopeDataFilter %>%
 
 Estimate O2 slopes over LR PAR step ranges
 Be careful with nesting!  Multiple steps at single ActPARinter
-Filter out first 30 s of each ActPARinter set to skip 'induction' phase.
+Filter out first 35 s of each ActPARinter set to skip 'induction' phase.
 Filter out last 5 s to avoid Dark1s = 1 rows
 ```{r O2slopes}
 induction_s = 35
@@ -311,4 +311,64 @@ O2Slopes %>%
     scale_colour_manual(values = Colours_nm) +
     facet_grid(cols = vars(CultureID, Date), rows = vars(Ex_WL, TempCont)) +
     theme_bw()
+```
+
+Merge O2Slopes Data with FRRf Data and Catalog
+It should be possible to do this with more clever unnesting.
+```{r}
+O2FRRfMeta <- left_join(x = FRRfDataLight, y = O2Slopes, by = c("Date",  "CultureID", "Ex_WL", "TempCont", "ActPAR" = "ActPARinter"), suffix = c("FRRf", "O2"), keep = FALSE) %>%
+  left_join(x = ., y = MetaData, by = c("CultureID" = "id"))
+
+#filter out cols that are all NA
+#https://stackoverflow.com/questions/2643939/remove-columns-from-dataframe-where-all-values-are-na
+
+O2FRRfMeta <- O2FRRfMeta %>% 
+  select(where(~!all(is.na(.x))))
+
+colnames(O2FRRfMeta)
+```
+
+Cross plots of O2 evolution and FRRf electron transport
+```{r O2FRRfcrossplots}
+O2FRRfMeta %>%
+  filter(O2evln_O2ls > 0) %>%
+  filter(JVPSII_aLHIIOxbomax > 0) %>%
+  ggplot() +
+  geom_point(aes(x = O2evln_O2ls, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
+  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_aLHIIOxbomax, colour = Ex_WL), method = "lm") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(TempCont), rows = vars(strain)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  filter(O2evln_O2ls > 0) %>%
+  filter(JVPSII_ETRqpOxbo_FoSig > 0) %>%
+  ggplot() +
+  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRtauav_FoSig, colour = Ex_WL)) +
+  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRtauav_FoSig, colour = Ex_WL), method = "lm") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(TempCont), rows = vars(strain)) +
+  theme_bw()
+
+
+O2FRRfMeta %>%
+  filter(O2evln_O2ls > 0) %>%
+  filter(JVPSII_ETRqpOxbo_FoSig > 0) %>%
+  ggplot() +
+  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRtauav_aLHII_Sig, colour = Ex_WL)) +
+  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRtauav_aLHII_Sig, colour = Ex_WL), method = "lm") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(TempCont), rows = vars(strain)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  filter(O2evln_O2ls > 0) %>%
+  filter(JVPSII_ETRqpOxbo_FoSig > 0) %>%
+  ggplot() +
+  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_aLHII_Sig, colour = Ex_WL)) +
+  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_aLHII_Sig, colour = Ex_WL), method = "lm") +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(TempCont), rows = vars(strain)) +
+  theme_bw()
+
 ```
