@@ -132,7 +132,6 @@ FRRfDataLight <- FRRfData %>%
 Read in Run Specific O2Data
 Make this more general as we accumulate more files.
 ```{r read data}
-#temporary hack to cope with run date; replace with GREP? or map?
 O2Data <- readRDS(file = file.path(DataInO2, paste("FluorO2_", Run, "_O2Data.Rds", sep = "")))
 
 colnames(O2Data)
@@ -152,8 +151,6 @@ O2Data <- O2Data %>%
 
 colnames(O2Data)
 
-O2Data <- O2Data %>%
-  mutate(TempCont = "noTC")
 ```
 
 ```{r prelimplot O2}
@@ -175,15 +172,15 @@ Draw plot from two dataframes
 FRRfDataLight %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = FvFm)) +
-  facet_grid(rows = vars(CultureID, Date), cols = vars(Ex_WL, TempCont)) +
+  facet_grid(rows = vars(CultureID, ObsDate), cols = vars(Ex_WL, TempCont)) +
   scale_colour_manual(values = Colours_nm)
 
-ggplot() +
-  #geom_point(data = O2Data, aes(x = LR_s, y = O2_umolL)) +
-  geom_point(data = FRRfDataLight, aes(x = LR_s, y = ETRqp)) +
-  facet_grid(rows = vars(CultureID, Date), cols = vars(Ex_WL, TempCont)) +
-  scale_colour_manual(values = Colours_nm) +
-  coord_cartesian(xlim = c(0, 1200))
+O2Data %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = O2_umolL)) +
+  facet_grid(rows = vars(CultureID, ObsDate), cols = vars(Ex_WL, TempCont)) +
+  scale_colour_manual(values = Colours_nm)
+
 ```
 
 
@@ -211,10 +208,9 @@ O2 curves from 2021-12-13 have no matching FRRf data in O2SlopeData even though 
 O2 and FRRf runs with/without TC
 Issue with LR_s estimate for 2021-12-13
 
-Issue:
 join by LR_s misses some FRRf data; issue with calculation?
 
-1/2 of LR_s estimates off by ~2400 s
+1/2 of LR_s estimates off by ~2400 s fixed by including TempCont in grouping for LR_s estimates
 ```{r O2FRRfprelimplot}
 O2SlopeData %>%
   #filter(Date == "2021-12-13" ) %>%
