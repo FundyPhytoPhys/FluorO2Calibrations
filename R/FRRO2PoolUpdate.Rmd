@@ -86,8 +86,7 @@ library(broom)
 ```{r set project variables}
 #"..", takes up a level in the directory path
 Project <- "FluorO2"
-#Temporary RunDate during auditing
-Run <- "SySlCCACaloxy"
+Run <- "MaBe"
 DataIn<- file.path("..","FitData")
 DataOut <- file.path("..", "ProcessData")
 #CatalogPath <- file.path("~/Dropbox/MURIS/MURIS_catalog.csv")

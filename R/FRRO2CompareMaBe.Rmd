@@ -392,15 +392,15 @@ O2FRRfMetaNest <-  O2FRRfMeta %>%
   filter(JVPSII_aLHIIOxbomax > 0) %>%
   nest(data = -c(Ex_WL, TempCont)) %>%
   mutate(
-  JVPSII_aLHIIOxbomax_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 +  JVPSII_aLHIIOxbomax, data = .x), otherwise = NULL)),
+  JVPSII_aLHIIOxbomax_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 +  JVPSII_aLHIIOxbomax, data = .x), otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_predict = map(JVPSII_aLHIIOxbomax_O2, possibly(augment, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_tidied =  map(JVPSII_aLHIIOxbomax_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_param = map(JVPSII_aLHIIOxbomax_O2, possibly(glance, otherwise = NULL)),
-  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_FoSig , data = .x), otherwise = NULL)),
+  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_FoSig , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_predict = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_tidied =  map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_param = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(glance, otherwise = NULL)),
-    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_aLHII_Sig , data = .x), otherwise = NULL)),
+    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_aLHII_Sig , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied =  map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_param = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(glance, otherwise = NULL))
@@ -411,9 +411,7 @@ O2FRRfMetaNest %>%
   unnest(JVPSII_aLHIIOxbomax_O2_predict) %>%
   ggplot() +
   geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted), colour = "black", linetype = "dashed") +
- #geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
- #geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
-  geom_point(aes(x = JVPSII_aLHIIOxbomax, y = O2evln_O2ls)) +
+  geom_point(aes(x = JVPSII_aLHIIOxbomax, y = `4 * O2evln_O2ls`)) +
   geom_point(aes(x = JVPSII_aLHIIOxbomax, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
   facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
@@ -423,21 +421,20 @@ O2FRRfMetaNest %>%
   unnest(JVPSII_ETRqpOxbo_FoSig_O2_predict) %>%
   ggplot() +
   geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted), colour = "black", linetype = "dashed") +
- #geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
- #geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
-  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = O2evln_O2ls)) +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = `4 * O2evln_O2ls`)) +
   geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
   facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
   theme_bw()
 
 O2FRRfMetaModels <- O2FRRfMetaNest %>%
-  unnest(JVPSII_aLHIIOxbomax_O2_tidied, JVPSII_aLHIIOxbomax_O2_param)  %>%
-  select(c(Ex_WL, TempCont, term:nobs)) %>%
-  rbind(O2FRRfMetaModels %>%
-  unnest(JVPSII_ETRqpOxbo_FoSig_O2_tidied, JVPSII_ETRqpOxbo_FoSig_O2_param) %>%
-  select(c(Ex_WL, TempCont, term:nobs)))
+  unnest(c(JVPSII_aLHIIOxbomax_O2_tidied, JVPSII_aLHIIOxbomax_O2_param), names_repair = "universal")  %>%
+  select(c(Ex_WL, TempCont, term:std.error, r.squared:sigma, df:nobs)) %>%
+  rbind(O2FRRfMetaNest %>%
+  unnest(c(JVPSII_ETRqpOxbo_FoSig_O2_tidied, JVPSII_ETRqpOxbo_FoSig_O2_param), names_repair = "universal") %>%
+  select(c(Ex_WL, TempCont, term:std.error, r.squared:sigma, df:nobs)))
 
+O2FRRfMetaModels
 
 ```
 
