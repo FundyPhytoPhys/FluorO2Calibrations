@@ -384,23 +384,23 @@ O2FRRfMeta %>%
 ```
 
 
-Fit regressions of FRRf estimators vs. O2evln
+Fit regressions of O2evln vs. FRRf estimators
 ```{r FRRFO2regressions}
 O2FRRfMetaNest <-  O2FRRfMeta %>%
-  filter(strain != "PCC6803") %>%
+  #filter(strain != "PCC6803") %>%
   filter(O2evln_O2ls > 0) %>%
   filter(JVPSII_aLHIIOxbomax > 0) %>%
   nest(data = -c(Ex_WL, TempCont)) %>%
   mutate(
-  JVPSII_aLHIIOxbomax_O2 = map(data, possibly(~lm(JVPSII_aLHIIOxbomax ~ 0 + O2evln_O2ls, data = .x), otherwise = NULL)),
+  JVPSII_aLHIIOxbomax_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 +  JVPSII_aLHIIOxbomax, data = .x), otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_predict = map(JVPSII_aLHIIOxbomax_O2, possibly(augment, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_tidied =  map(JVPSII_aLHIIOxbomax_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_param = map(JVPSII_aLHIIOxbomax_O2, possibly(glance, otherwise = NULL)),
-  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(JVPSII_ETRqpOxbo_FoSig ~ 0 + O2evln_O2ls, data = .x), otherwise = NULL)),
+  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_FoSig , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_predict = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_tidied =  map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_param = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(glance, otherwise = NULL)),
-    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(JVPSII_ETRqpOxbo_aLHII_Sig ~ 0 + O2evln_O2ls, data = .x), otherwise = NULL)),
+    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_aLHII_Sig , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied =  map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_param = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(glance, otherwise = NULL))
@@ -410,51 +410,39 @@ O2FRRfMetaNest <-  O2FRRfMeta %>%
 O2FRRfMetaNest %>%
   unnest(JVPSII_aLHIIOxbomax_O2_predict) %>%
   ggplot() +
-  geom_line(aes(x = O2evln_O2ls, y = .fitted), colour = "black", linetype = "dashed") +
- # geom_line(aes(x = O2evln_O2ls, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
- #   geom_line(aes(x = O2evln_O2ls, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_aLHIIOxbomax),colour = "darkgreen") +
-  geom_point(aes(x = O2evln_O2ls, y = .resid), colour = "darkred", size = 0.1) +
+  geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted), colour = "black", linetype = "dashed") +
+ #geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
+ #geom_line(aes(x = JVPSII_aLHIIOxbomax, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
+  geom_point(aes(x = JVPSII_aLHIIOxbomax, y = O2evln_O2ls)) +
+  geom_point(aes(x = JVPSII_aLHIIOxbomax, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
   facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
   theme_bw()
-
-O2FRRfMetaNest %>%
-  unnest(JVPSII_aLHIIOxbomax_O2_tidied)
 
 O2FRRfMetaNest %>%
   unnest(JVPSII_ETRqpOxbo_FoSig_O2_predict) %>%
   ggplot() +
-  geom_line(aes(x = O2evln_O2ls, y = .fitted), colour = "black", linetype = "dashed") +
- # geom_line(aes(x = O2evln_O2ls, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
- #   geom_line(aes(x = O2evln_O2ls, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_FoSig),colour = "darkgreen") +
-  geom_point(aes(x = O2evln_O2ls, y = .resid), colour = "darkred", size = 0.1) +
+  geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted), colour = "black", linetype = "dashed") +
+ #geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
+ #geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = O2evln_O2ls)) +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
   facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
   theme_bw()
 
-O2FRRfMetaNest %>%
-  unnest(JVPSII_ETRqpOxbo_FoSig_O2_tidied)
+O2FRRfMetaModels <- O2FRRfMetaNest %>%
+  unnest(JVPSII_aLHIIOxbomax_O2_tidied, JVPSII_aLHIIOxbomax_O2_param)  %>%
+  select(c(Ex_WL, TempCont, term:nobs)) %>%
+  rbind(O2FRRfMetaModels %>%
+  unnest(JVPSII_ETRqpOxbo_FoSig_O2_tidied, JVPSII_ETRqpOxbo_FoSig_O2_param) %>%
+  select(c(Ex_WL, TempCont, term:nobs)))
 
-O2FRRfMetaNest %>%
-  unnest(JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict) %>%
-  ggplot() +
-  geom_line(aes(x = O2evln_O2ls, y = .fitted), colour = "black", linetype = "dashed") +
- # geom_line(aes(x = O2evln_O2ls, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
- #   geom_line(aes(x = O2evln_O2ls, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_aLHII_Sig),colour = "darkgreen") +
-  geom_point(aes(x = O2evln_O2ls, y = .resid), colour = "darkred", size = 0.1) +
-  geom_hline(yintercept = 0,linetype = "dashed") +
-  facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
-  theme_bw()
-
-O2FRRfMetaNest %>%
-  unnest(JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied)
 
 ```
 
 
 ```{r save O2FRRfMeta}
 saveRDS(O2FRRfMeta, file.path(DataOut, paste(Project, Run, "O2FRRfMeta.Rds", sep = "_"), fsep = .Platform$file.sep))
+saveRDS(O2FRRfMetaModels, file.path(DataOut, paste(Project, Run, "O2FRRfMetaModels.Rds", sep = "_"), fsep = .Platform$file.sep))
 ```
