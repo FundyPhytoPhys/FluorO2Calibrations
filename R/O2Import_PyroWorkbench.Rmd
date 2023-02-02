@@ -128,11 +128,11 @@ knitr::opts_chunk$set(fig.path='Figs/')
 #"..", takes up a level in the directory path
 Project <- "FluorO2"
 
-Run <- "SySlCCACaloxy"
+Run <- "SySlCCACaloxyBiolSteps"
 
 
 FileID <- "caloxy"
-DataIn <- file.path("..", "Optode", Run)
+DataIn <- file.path("..","RawData","SySl", "Optode", Run)
 DataOut <- file.path("..","ImportData", "Optode")
 #MetaCatalog <- file.path("..","PicoCatalog.csv")
 
@@ -140,7 +140,7 @@ FileEncode <- "UTF-8"
 Delimiter <- "\t"
 
 #fixed HeaderRows is brittle; better to figure out how to read all data starting at line that contains 'key'
-HeaderRows <- 19
+HeaderRows <- 13 #or 19 for some files
 Comment <- "#"
 
 #Set URL for MetaData
@@ -151,14 +151,12 @@ MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4f
 # libraries; Note check actual dependencies
 library(tidyverse)
 library(lubridate)
-#library(stringr)
 library(broom)
 #library(knitr)
 #library(zoo)
 #library(tidyquant)
 library(googlesheets4)
 library(googledrive)
-#library(dplyr)
 ```
 
 ```{r set colours}
@@ -213,8 +211,8 @@ Creates function using data.table::fread to skip the beginning comments and star
 
 
 #function allows you to read in oxygen data files (Reads in Run14 files)
-read_tsv_plus <- function(Flnm, HeaderRows){read_tsv(Flnm,  col_names = TRUE,  comment = Comment) %>%
-    mutate(filename = Flnm)}
+read_tsv_plus <- function(Flnm, HeaderRows){read_tsv(Flnm,  skip = HeaderRows, col_names = TRUE,  comment = Comment) %>%
+    mutate(Filename = Flnm)}
 
 #generates a read function using tidyverse::read_delim
  #read.delim_plus <- function(flnm, FileEncode, Delimiter, HeaderRows){read.delim(flnm, fileEncoding = FileEncode, sep = Delimiter,  skip = HeaderRows, row.names = NULL) %>%
@@ -231,30 +229,34 @@ Reads in O2Data, and skips the "notes" at the beginning of the data and begins t
 ```{r read optode data}
 
 #brittle to use column numbers; needs to be changed if using multiple channels
+#header rows vary across files
 O2Data <- O2DataFiles %>% 
-  map_df(~read_tsv_plus(Flnm = ., HeaderRows = 19)) %>%
-  select(c(1:4, 12, "Time [Comment]","Comment","filename")) %>%
-  rename(Date = `Date [A Ch.1 Main]`, 
-         AbsTime = `Time [A Ch.1 Main]`,
-         LR_s = `dt (s) [A Ch.1 Main]`,
-         O2_umolL = `Oxygen (\xb5mol/L) [A Ch.1 Main]`, 
-         Temp_C = `Sample Temp. (\xb0C) [A Ch.1 CompT]`,
-         CommentTime = `Time [Comment]`) %>%
-  mutate(CommentTime = hms::new_hms(as.numeric(CommentTime) + (3600 * 12)))
+  map_df(~read_tsv_plus(Flnm = ., HeaderRows = 13))
 
-O2Data <- O2Data %>%
-  mutate(filename = str_remove(string = filename, pattern = ".txt")) %>%
-  mutate(filename = str_remove(string = filename, pattern = "../RawData/Optode/")) %>%  
-  separate(filename, into = c("RunDate", "FileDate","FileTime", "Project", "FileID", "CultureID", "Ex_WL"), sep = "([\\/\\_\\_\\_\\_\\_])", remove = FALSE) %>%
-  mutate(FileTime = parse_date_time(as.character(FileTime), "hms")) %>%
-  separate(FileTime, into = c("FileYear", "FileTime"), sep = "([ ])", remove = TRUE) %>%
-  select(-c(FileYear))
 
-O2Data[1:5,]
+head(O2Data)
+```
+
+```{r tidy optode data}
+O2Data2 <- O2Data %>%
+  select(c("Date", "Time (HH:MM:SS)", "Time (s)", "Ch1...5", "Ch 1...9", "Filename")) %>%
+  rename(AbsTime = `Time (HH:MM:SS)`,
+         LR_s = `Time (s)`,
+         O2_umolL = `Ch1...5`, 
+         Temp_C = `Ch 1...9`)
+
+O2Data2 <- O2Data2 %>%
+  mutate(Filename = str_remove(string = Filename, pattern = ".txt")) %>%
+  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/SySl/Optode/")) %>%  
+  mutate(Filename = str_remove(string = Filename, pattern = "_caloxy")) %>% 
+  separate(Filename, into = c("Run", "YYYYMMDDHHMM", "Project", "CultureID", "Ex_WL", "GrowthLight"), sep = "([\\/\\_\\_\\_\\_\\_])", remove = FALSE) %>%
+  mutate(YYYYMMDDHHMM = parse_date_time(as.character(YYYYMMDDHHMM), "ymd_HM"))
+
+O2Data2[1:5,]
 ```
 
 ```{r prelimplot}
-O2Data %>%
+O2Data2 %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
@@ -264,7 +266,7 @@ O2Data %>%
 
 
 ```{r save SolFitsTrim data}
-saveRDS(O2Data, file.path(DataOut, paste(Project, RunDate, "O2Data.Rds", sep = "_"), fsep = .Platform$file.sep))
+saveRDS(O2Data, file.path(DataOut, paste(Project, Run, "O2Data.Rds", sep = "_"), fsep = .Platform$file.sep))
 ```
 
 
