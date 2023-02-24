@@ -15,7 +15,6 @@ output:
 csl: plos-one.csl
 ---
 
-*Some of the code used to create this R Notebook was refurbished from "PlateAbImport.Rmd" written by Maximilian Berthold, Douglas A. Campbell, Melissa L. Rioux, Sarah J Gore, and Alyson MacCormack.*
 
 test 
 
@@ -45,7 +44,7 @@ Project <- "FluorO2"
 DataOut <- file.path("..", "ImportData", "FRRf")
 CalibData <- file.path("..", "CalibrationData")
 
-Run <- "SySlCCA"
+Run <- "SySlBiolSteps"
 
 DataIn <- file.path("..", "RawData", "SySl", "Solisense", "SySlCCACaloxyBiolSteps", fsep = .Platform$file.sep)
 
@@ -101,6 +100,7 @@ Colours_nm
 
 ```{r list PSI files for file import}
 SolisenseFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = FALSE)
+
 SolisenseFiles
 
 #test for duplicate file names

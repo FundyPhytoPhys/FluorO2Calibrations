@@ -128,7 +128,7 @@ knitr::opts_chunk$set(fig.path='Figs/')
 #"..", takes up a level in the directory path
 Project <- "FluorO2"
 
-Run <- "SySlCCACaloxyBiolSteps"
+Run <- "SySlBiolSteps"
 
 
 FileID <- "caloxy"
@@ -192,7 +192,7 @@ listing the names of the oxygen data, classified as DataIn. DataIn = O2Data
 ```{r O2Data files}
 
 #recursive = TRUE sets function to go down directory path
-O2DataFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = TRUE)
+O2DataFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = FALSE)
 
 #check file names
 O2DataFiles
