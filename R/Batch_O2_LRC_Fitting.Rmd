@@ -3,58 +3,103 @@ title: "O2 LRC Fitting"
 output: html_notebook
 author: Douglas A. Campbell
 ---
-This is an R Notebook.
-Run code chunks, in order, by clicking the green arrows.
 
-This R Notebook imports oxygen evolution vs. PAR data.
-It fits and plots three models for O2 light response curves, and reports the parameters of the fits.
+##Introduction
+We use an optode to measure [O2] µmol l-1 in suspensions of phytoplankton.
+Changes in [O2] reflect (hopefully) oxygen evolution or oxygen consumption by the cell suspension.
 
-# Set Student Operator Name
-Enter operatore name between the ""
-```{r operator name}
-Operator <- "Sevcik"
+## Materials and Methods
+
+This .Rmd Rworkbook imports data in simple .txt .tsv form exported from FireSting optodes based upon project specific values for variables set by the user.
+
+It fits and plots models for O2 light response curves, and reports the parameters of the fits.
+
+# Set Chunk Options
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(fig.path='Figs/')
 ```
 
-# Define data file name, in .xlsx format
-Enter data file name between ""
-```{r paths and variables}
-O2FileName <- "2022.03.21.Sevcik.R.Test1.xlsx"
+```{r set project variables}
+#"..", takes up a level in the directory path
+Project <- "FluorO2"
+
+Run <- "SySlBiolSteps"
+
+
+FileID <- "caloxy"
+DataIn <- file.path("..","ImportData", "Optode")
+#DataOut <- file.path("..","ImportData", "Optode")
+
+
+FileEncode <- "UTF-8" 
+Delimiter <- "\t"
+
+#fixed HeaderRows is brittle; better to figure out how to read all data starting at line that contains 'key'
+HeaderRows <- 13 #or 19 for some files
+Comment <- "#"
+
+#Set URL for MetaData
+MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 ```
 
-# Define location of data file
-```{r file path}
-DataInPath <- file.path("..", "Data", "RawData")
-```
 
 # Call libraries to access functions
 ```{r libraries}
-library(readxl) #importing files from Excel
-library(tidyverse) #data wrangling & plotting
+library(tidyverse)
+library(lubridate)
+library(googlesheets4)
+library(googledrive)
 library(minpack.lm) #non linear model fitting
-library(broom) #formatting model outputs
+library(broom)
+
 ```
 
-# Import data file into R and inspect
-```{r file import}
-O2Data <- read_excel(file.path(DataInPath, O2FileName))
 
-O2Data
-```
-# Rename variables for R compatability
-```{r variable rename}
-O2Data <- O2Data %>%
-  rename(umolphotons_m2_s1 = 1,
-         umolO2_mmolChl1_s1 = 2)
+```{r set colours}
+Wavelengths_nm = c(445, 470, 505, 535, 590)
+Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
+
+
+names(Colours_nm) <- Wavelengths_nm
+Colours_nm
+
 ```
 
-# Data Test Plot
-```{r test plot}
+This chunk reads in the MetaData catalog from googlesheets 
+```{r load Catalog, now as a google sheet}
+ gs4_deauth()
+# #deauthorizes access to googlesheet
+# 
+ MetaCatalog <- read_sheet(MetaDataURL) %>%
+# # sheet is read in by sheet ID, obtained from the URL of the sheet.
+# # read_sheet has an annoying "feature" to set the type of columns it can't parse to a list.
+# # ggplot/dplyr doesn't like working with a dataframe of lists.
+# # In this case WL is set to a list since some values are numbers, some are strings, some are blank.
+# # To fix this, first drop all rows missing WL, then unlist.
+# # Must first drop NA rows since unlist will collapse NULL lists, then the unlisted WL is a shorter length than original WL column, which mutate doesn't like.
+# 
+ drop_na(WL) %>%
+   mutate(WL = unlist(WL))
+ 
+ as.data.frame(MetaCatalog)
+```
+
+```{r read imported O2 data}
+O2Data <- readRDS(file.path(DataIn, paste(paste(Project, Run, "O2Data", sep = "_"), ".Rds", sep = "")))
+
+```
+
+
+```{r prelimplot}
 O2Data %>%
   ggplot() +
-  geom_point(aes(x = umolphotons_m2_s1, y = umolO2_mmolChl1_s1)) +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
-
 ```
+
 
 # Define model equations
 Citations: Ma X, Liu Q, Zhang Z, Zhang Z, Zhou Z, Jiang Y, et al. (2021) Effects of photosynthetic models on the calculation results of photosynthetic response parameters in young Larix principis- rupprechtii Mayr. plantation. PLoS ONE 16(12): e0261683. https://doi.org/10.1371/journal.pone.0261683
@@ -90,8 +135,8 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 # Fit model equations
 ```{r fit models}
 O2Models <- O2Data %>%
-  nest(data = everything()) %>%
-  mutate(LRC_model = map(data, possibly(~nlsLM(umolO2_mmolChl1_s1 ~ lrc(I = umolphotons_m2_s1, a, Pmax, R),
+  nest(data = c("AbsTime", "LR_s", "O2_umolL", "YYYYMMDDHHMM")) %>%
+  mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolL ~ lrc(I = umolphotons_m2_s1, a, Pmax, R),
                               data = .x,
                               start = list(a = 1,
                                            Pmax = max(.$umolO2_mmolChl1_s1, na.rm = TRUE),
