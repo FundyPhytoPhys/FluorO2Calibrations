@@ -26,21 +26,19 @@ Project <- "FluorO2"
 
 Run <- "SySlBiolSteps"
 
+TC <- "TC"
 
-FileID <- "caloxy"
-DataIn <- file.path("..","ImportData", "Optode")
+
+FileID <- "O2FRRfMeta"
+
+O2DataIn <- file.path("..", "FitData")
+ChlDataIn <- file.path("..","ImportData")
 #DataOut <- file.path("..","ImportData", "Optode")
 
 
-FileEncode <- "UTF-8" 
-Delimiter <- "\t"
-
-#fixed HeaderRows is brittle; better to figure out how to read all data starting at line that contains 'key'
-HeaderRows <- 13 #or 19 for some files
-Comment <- "#"
 
 #Set URL for MetaData
-MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
+#MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 ```
 
 
@@ -48,8 +46,8 @@ MetaDataURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4f
 ```{r libraries}
 library(tidyverse)
 library(lubridate)
-library(googlesheets4)
-library(googledrive)
+# library(googlesheets4)
+# library(googledrive)
 library(minpack.lm) #non linear model fitting
 library(broom)
 
@@ -60,7 +58,6 @@ library(broom)
 Wavelengths_nm = c(445, 470, 505, 535, 590)
 Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
 
-
 names(Colours_nm) <- Wavelengths_nm
 Colours_nm
 
@@ -68,36 +65,51 @@ Colours_nm
 
 This chunk reads in the MetaData catalog from googlesheets 
 ```{r load Catalog, now as a google sheet}
- gs4_deauth()
-# #deauthorizes access to googlesheet
-# 
- MetaCatalog <- read_sheet(MetaDataURL) %>%
-# # sheet is read in by sheet ID, obtained from the URL of the sheet.
-# # read_sheet has an annoying "feature" to set the type of columns it can't parse to a list.
-# # ggplot/dplyr doesn't like working with a dataframe of lists.
-# # In this case WL is set to a list since some values are numbers, some are strings, some are blank.
-# # To fix this, first drop all rows missing WL, then unlist.
-# # Must first drop NA rows since unlist will collapse NULL lists, then the unlisted WL is a shorter length than original WL column, which mutate doesn't like.
-# 
- drop_na(WL) %>%
-   mutate(WL = unlist(WL))
- 
- as.data.frame(MetaCatalog)
+#  gs4_deauth()
+# # #deauthorizes access to googlesheet
+# # 
+#  MetaCatalog <- read_sheet(MetaDataURL) %>%
+# # # sheet is read in by sheet ID, obtained from the URL of the sheet.
+# # # read_sheet has an annoying "feature" to set the type of columns it can't parse to a list.
+# # # ggplot/dplyr doesn't like working with a dataframe of lists.
+# # # In this case WL is set to a list since some values are numbers, some are strings, some are blank.
+# # # To fix this, first drop all rows missing WL, then unlist.
+# # # Must first drop NA rows since unlist will collapse NULL lists, then the unlisted WL is a shorter length than original WL column, which mutate doesn't like.
+# # 
+#  drop_na(WL) %>%
+#    mutate(WL = unlist(WL))
+#  
+#  as.data.frame(MetaCatalog)
 ```
 
 ```{r read imported O2 data}
-O2Data <- readRDS(file.path(DataIn, paste(paste(Project, Run, "O2Data", sep = "_"), ".Rds", sep = "")))
+O2FRRfMeta <- readRDS(file.path(O2DataIn, paste(paste(Project, Run, TC, FileID, sep = "_"), ".Rds", sep = "")))
 
 ```
 
 
 ```{r prelimplot}
-O2Data %>%
+O2FRRfMeta %>%
   ggplot() +
-  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorr, y = O2_umolLs, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
+```
+
+```{r read chl}
+Chl <- readRDS(file.path(ChlDataIn, "PICO_ChlTurnerAll.Rds" ))
+
+#collapse to averages
+ChlAv <- Chl %>%
+  select(-c("Chl_ugL", "Chl_ugmL", "cellsml", "Chla_ugN")) %>%
+  unique()
+```
+
+# Merge O2FRRfMeta & Chl Data
+```{r merge O2FRRfMeta chl}
+O2FRRfMeta <- left_join(x = O2FRRfMeta, y = ChlAv, by = join_by("CultureID", "ObsDate" == "DATE"))
+
 ```
 
 
