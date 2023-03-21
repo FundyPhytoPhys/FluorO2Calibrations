@@ -419,7 +419,7 @@ XXXXXX
 Merge O2Slopes Data with FRRf Data and Catalog
 
 ```{r}
-O2FRRfMeta <- left_join(x = FRRfDataLight, y = O2Slopes, by = c("ObsDate", "CultureID", "Ex_WL", "GrowthLight", "ActPARCorr" = "ActPARCorrinter"), suffix = c("FRRf", "O2"), keep = FALSE)
+O2FRRfMeta <- left_join(x = FRRfDataLight, y = O2Slopes, by = c("ObsDate", "CultureID", "Ex_WL", "ActPARCorr" = "ActPARCorrinter", "TempCont" ), suffix = c("FRRf", "O2"), keep = FALSE)
 
 
 %>%
