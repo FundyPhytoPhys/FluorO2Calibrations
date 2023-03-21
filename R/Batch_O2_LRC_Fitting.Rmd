@@ -85,11 +85,18 @@ This chunk reads in the MetaData catalog from googlesheets
 ```{r read imported O2 data}
 O2FRRfMeta <- readRDS(file.path(O2DataIn, paste(paste(Project, Run, TC, FileID, sep = "_"), ".Rds", sep = "")))
 
+O2Meta <- O2FRRfMeta %>%
+  filter(Dark1s == 0) %>%
+  select(c(SourceDataFile:ObsTime, Ex_WL:LR_s, Filename, StartDateTimeSol, TempContFRRf, ActPARCorr, O2_umolLs, O2evln_O2ls, O2evln_O2lsMIN, Strain, Par_ue, Photoperiod, Temp_c, O2_Category, WL, LightShape))
+             
+ 
+
+
 ```
 
 
 ```{r prelimplot}
-O2FRRfMeta %>%
+O2Meta %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = O2_umolLs, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
@@ -103,25 +110,26 @@ Chl <- readRDS(file.path(ChlDataIn, "PICO_ChlTurnerAll.Rds" ))
 #collapse to averages
 ChlAv <- Chl %>%
   select(-c("Chl_ugL", "Chl_ugmL", "cellsml", "Chla_ugN")) %>%
-  unique()
+  unique() %>%
+  select(-c("Strain", "InnocDate", "ExpDate", "Par_ue", "Photoperiod" , "Calculated_µmolPhotons_m-2d-1", "Tube", "O2", "WL","LightShape"))
 ```
 
 # Merge O2FRRfMeta & Chl Data
 ```{r merge O2FRRfMeta chl}
-O2FRRfMeta <- left_join(x = O2FRRfMeta, y = ChlAv, by = join_by("CultureID", "ObsDate" == "DATE"))
+O2Meta <- left_join(x = O2Meta, y = ChlAv, by = join_by("CultureID", "ObsDate" == "DATE"))
 
 ```
 
 # O2 per chl
 ```{r o2 per chl}
-O2FRRfMeta <- O2FRRfMeta %>%
+O2Meta <- O2Meta %>%
   mutate(O2_umolugChls = O2_umolLs/(meanChl_ugmL * 1000),
     O2evln_umolugChls = O2evln_O2ls/(meanChl_ugmL * 1000))
 ```
 
 
 ```{r O2 chl prelimplot}
-O2FRRfMeta %>%
+O2Meta %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = O2_umolugChls, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
@@ -162,9 +170,11 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 
 # Fit model equations
 ```{r fit models}
-O2Models <- O2Data %>%
-  nest(data = c("AbsTime", "LR_s", "O2_umolL", "YYYYMMDDHHMM")) %>%
-  mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolL ~ lrc(I = umolphotons_m2_s1, a, Pmax, R),
+O2Models <- O2Meta %>%
+  nest(data = c("ObsTime", "ActPAR", "ActPARCorr",  "LR_s", "O2_umolLs", "O2evln_O2ls", "O2evln_O2lsMIN", "O2_umolugChls", "O2evln_umolugChls"))
+       
+       ) %>%
+  mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc(I = umolphotons_m2_s1, a, Pmax, R),
                               data = .x,
                               start = list(a = 1,
                                            Pmax = max(.$umolO2_mmolChl1_s1, na.rm = TRUE),
