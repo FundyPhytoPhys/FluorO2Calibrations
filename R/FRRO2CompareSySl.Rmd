@@ -287,7 +287,7 @@ Problem if LR_s used for join? lose separate LR_sFRRf previously used for interp
 #https://dplyr.tidyverse.org/dev/articles/colwise.html
 #Interpolation causes problems with final rows that repeat last value.
 
-interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = TRUE, type = "l", maxgap = Inf)}
+interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = FALSE, type = "l", maxgap = Inf)}
 
 O2SlopeDataClean <- O2SlopeDataClean %>%
   mutate(ActPARCorrinter = interpolate(ActPARCorr))
@@ -415,11 +415,14 @@ Filter runs with positive initial dark slope?
 ```
 
 
-
+XXXXXX
 Merge O2Slopes Data with FRRf Data and Catalog
 
 ```{r}
-O2FRRfMeta <- left_join(x = FRRfData, y = O2Slopes, by = c("ObsDate", "CultureID", "Ex_WL", "GrowthLight", "ActPARCorr" = "ActPARCorrinter"), suffix = c("FRRf", "O2"), keep = FALSE) %>%
+O2FRRfMeta <- left_join(x = FRRfDataLight, y = O2Slopes, by = c("ObsDate", "CultureID", "Ex_WL", "GrowthLight", "ActPARCorr" = "ActPARCorrinter"), suffix = c("FRRf", "O2"), keep = FALSE)
+
+
+%>%
    left_join(x = ., y = MetaData, by = c("CultureID" = "ID"))
 
 ```
