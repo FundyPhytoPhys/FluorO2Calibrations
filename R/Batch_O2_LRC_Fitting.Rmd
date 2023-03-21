@@ -168,6 +168,8 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 
 ```
 
+Issue with O2FRRfMeta O2 slope models skip ActPARCorr = 0 rows.
+
 # Fit model equations
 ```{r fit models}
 O2Models <- O2Meta %>%
