@@ -308,24 +308,22 @@ O2SlopeDataClean %>%
 
 Estimate O2 slopes over LR PAR step ranges
 Be careful with nesting!  Multiple steps at single ActPARCorrinter
-Filter out first 50 s of each ActPARCorrinter set to skip 'induction' phase.
-Filter out last 10 s to avoid Dark1s = 1 rows
-Some final '0' steps of Light Response curves fail to generate O2lm.
+Filter out first `r induction_s` s of each ActPARCorrinter set to skip 'induction' phase.
+Stop fitting at `r_end_s`
+
 ```{r O2slopes}
 induction_s = 60
 end_s = 170
 
 O2Slopes <- O2SlopeDataClean %>%
-    nest(O2data = -c(FilenameO2, ActPARCorrinter, CultureID, ObsDate, Ex_WL, GrowthLight, TempCont, Project, Run)) %>%
-  filter(!is.na(ActPARCorrinter))
+  filter(!is.na(ActPARCorrinter)) %>%
+    nest(O2data = -c(FilenameO2, ActPARCorrinter, CultureID, ObsDate, Ex_WL, GrowthLight, TempCont, Project, Run))
 
 #head(O2Slopes)
 
 O2Slopes <- O2Slopes %>%
   mutate(O2lm = map(O2data,  possibly(~ lm(O2_umolL[induction_s:end_s] ~ as.numeric(LR_s[induction_s:end_s]), data = .x), otherwise = NULL)))
 
-
-#careful with group_by; this only works with a single replication of each LR with 5 steps per LR starting and ending with 0; redo to average all O2_umolLs at PAR = 0
   #mutate(O2evln_O2ls_OLD = (O2_umolLs - min(O2_umolLs)) * 6.022e17) %>%     , O2_umolLs[5]
 
 O2Slopes <- O2Slopes %>%
@@ -355,7 +353,7 @@ O2Slopes <- O2Slopes %>%
 
 O2Slopes %>%
   ggplot() +
-  geom_line(aes(x = ActPARCorrinter, y = O2_umolLs, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorrinter, y = O2_umolLs, colour = Ex_WL)) +
     scale_colour_manual(values = Colours_nm) +
  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
@@ -364,7 +362,7 @@ O2Slopes %>%
 
 O2Slopes %>%
   ggplot() +
-  geom_line(aes(x = ActPARCorrinter, y = O2evln_O2ls, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorrinter, y = O2evln_O2ls, colour = Ex_WL)) +
   #geom_line(aes(x = ActPARCorrinter, y = O2evln_O2ls_OLD, colour = "black")) +
     scale_colour_manual(values = Colours_nm) +
 facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
@@ -374,7 +372,7 @@ facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
 
 O2Slopes %>%
   ggplot() +
-  geom_line(aes(x = ActPARCorrinter, y = O2evln_O2lsMIN, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorrinter, y = O2evln_O2lsMIN, colour = Ex_WL)) +
   #geom_line(aes(x = ActPARCorrinter, y = O2evln_O2ls_OLD, colour = "black")) +
     scale_colour_manual(values = Colours_nm) +
 facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
