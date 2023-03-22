@@ -167,7 +167,7 @@ Remove missing rows, reconcile time formats
 O2Data <- O2Data %>%
   filter(!is.na(LR_s)) %>%
   filter(TempCont == Cuvette) %>%
-  filter(LR_s <= 1000)
+  filter(LR_s <= 1600)
 
 #%>%
   #filter(CultureID == StrainID) %>%
@@ -184,7 +184,6 @@ O2Data %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(CultureID), cols = vars(Ex_WL)) +
-  xlim(0, 1000) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
@@ -253,7 +252,6 @@ O2SlopeData %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorr), colour = "black") +
-  coord_cartesian(xlim = c(0, 1080)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
@@ -314,7 +312,7 @@ Filter out first 50 s of each ActPARCorrinter set to skip 'induction' phase.
 Filter out last 10 s to avoid Dark1s = 1 rows
 Some final '0' steps of Light Response curves fail to generate O2lm.
 ```{r O2slopes}
-induction_s = 90
+induction_s = 60
 end_s = 170
 
 O2Slopes <- O2SlopeDataClean %>%
