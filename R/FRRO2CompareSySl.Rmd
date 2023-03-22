@@ -654,7 +654,7 @@ O2FRRfMetaNest <-  O2FRRfMeta %>%
 #   select(-c(data, JVPSII_aLHIIOxbomax_O2, ETRqpOxbo_O2, JVPSII_ETRqpOxbo_FoSig_O2))
 
 O2FRRfMetaModels <- O2FRRfMetaNest %>%
-  select(-c("JVPSII_aLHIIOxbomax_O2_tidied", "JVPSII_aLHIIOxbomax_O2_param", "JVPSII_aLHIIOxbomax_O2_predict", "JVPSII_ETRtauav_FoSig_O2_tidied", "JVPSII_ETRtauav_FoSig_O2_param", "JVPSII_ETRtauav_FoSig_O2_predict" ,  "JVPSII_ETRqpOxbo_FoSig_O2_tidied",      "JVPSII_ETRqpOxbo_FoSig_O2_param",  "JVPSII_ETRqpOxbo_FoSig_O2_predict" ,    
+  select(-c("data", "JVPSII_aLHIIOxbomax_O2_tidied", "JVPSII_aLHIIOxbomax_O2_param", "JVPSII_aLHIIOxbomax_O2_predict", "JVPSII_ETRtauav_FoSig_O2_tidied", "JVPSII_ETRtauav_FoSig_O2_param", "JVPSII_ETRtauav_FoSig_O2_predict" ,  "JVPSII_ETRqpOxbo_FoSig_O2_tidied",      "JVPSII_ETRqpOxbo_FoSig_O2_param",  "JVPSII_ETRqpOxbo_FoSig_O2_predict" ,    
  "JVPSII_ETRtauav_aLHII_Sig_O2_tidied", "JVPSII_ETRtauav_aLHII_Sig_O2_param",     "JVPSII_ETRtauav_aLHII_Sig_O2_predict" , "JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied", "JVPSII_ETRqpOxbo_aLHII_Sig_O2_param", "JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict" ))
 ```
 
