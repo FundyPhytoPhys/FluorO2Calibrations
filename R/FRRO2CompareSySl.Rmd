@@ -614,7 +614,6 @@ All of SySl data then lost; not applicable in this case
 
 # Fit regressions of FRRf estimators vs. O2evln_O2lsMIN
 ```{r FRRFO2regressions}
-#include representative 'augment' for test plots
 
 O2FRRfMetaNest <-  O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
@@ -658,7 +657,7 @@ O2FRRfMetaModels <- O2FRRfMetaNest %>%
  "JVPSII_ETRtauav_aLHII_Sig_O2_tidied", "JVPSII_ETRtauav_aLHII_Sig_O2_param",     "JVPSII_ETRtauav_aLHII_Sig_O2_predict" , "JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied", "JVPSII_ETRqpOxbo_aLHII_Sig_O2_param", "JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict" ))
 ```
 
-```{r ETR O2 regressions}
+```{r etrO2 regressions}
 
 O2FRRfMetaNest %>%
   unnest(JVPSII_aLHIIOxbomax_O2_predict) %>%
@@ -722,6 +721,14 @@ O2FRRfMetaNest %>%
   theme_bw()
 
 
+```
+
+```{r regterms}
+O2FRRfMetaNest %>%
+  unnest(c( JVPSII_aLHIIOxbomax_O2_tidied, JVPSII_ETRtauav_FoSig_O2_tidied, JVPSII_ETRqpOxbo_FoSig_O2_tidied, JVPSII_ETRtauav_aLHII_Sig_O2_tidied, JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied), names_sep = "_") %>%
+  select(-c("data", "JVPSII_ETRtauav_aLHII_Sig_O2",  "JVPSII_aLHIIOxbomax_O2", "JVPSII_aLHIIOxbomax_O2_param","JVPSII_aLHIIOxbomax_O2_predict","JVPSII_ETRtauav_FoSig_O2", "JVPSII_ETRtauav_FoSig_O2_param",        "JVPSII_ETRtauav_FoSig_O2_predict","JVPSII_ETRqpOxbo_FoSig_O2", "JVPSII_ETRqpOxbo_FoSig_O2_param","JVPSII_ETRqpOxbo_FoSig_O2_predict","JVPSII_ETRtauav_aLHII_Sig_O2_param","JVPSII_ETRtauav_aLHII_Sig_O2_predict",  "JVPSII_ETRqpOxbo_aLHII_Sig_O2","JVPSII_ETRqpOxbo_aLHII_Sig_O2_param","JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict")) %>%
+  select(-contains("_statistic")) %>%
+  pivot_longer(cols = contains(c("estimate", "std.error", "p.value")), names_to = "Model")
 ```
 
 
