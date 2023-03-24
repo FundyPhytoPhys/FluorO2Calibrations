@@ -10,9 +10,9 @@ Changes in [O2] reflect (hopefully) oxygen evolution or oxygen consumption by th
 
 ## Materials and Methods
 
-This .Rmd Rworkbook imports data in simple .txt .tsv form exported from FireSting optodes based upon project specific values for variables set by the user.
+This .Rmd Rworkbook imports O2, FRRf and Metadata in .Rds after import through  O2Import and a  SoliSenseImport, and comparison through a FRRO2Compare  
 
-It fits and plots models for O2 light response curves, and reports the parameters of the fits.
+It fits and plots models for JVPSII and O2 light response curves, and reports the parameters of the fits.
 
 # Set Chunk Options
 ```{r setup, include = FALSE}
@@ -31,7 +31,7 @@ TC <- "TC"
 
 FileID <- "O2FRRfMeta"
 
-O2DataIn <- file.path("..", "FitData")
+DataIn <- file.path("..", "FitData")
 ChlDataIn <- file.path("..","ImportData")
 #DataOut <- file.path("..","ImportData", "Optode")
 
@@ -82,21 +82,18 @@ This chunk reads in the MetaData catalog from googlesheets
 #  as.data.frame(MetaCatalog)
 ```
 
-```{r read imported O2 data}
-O2FRRfMeta <- readRDS(file.path(O2DataIn, paste(paste(Project, Run, TC, FileID, sep = "_"), ".Rds", sep = "")))
+```{r read imported O2, FRRf and meta data}
+O2FRRfMeta <- readRDS(file.path(DataIn, paste(paste(Project, Run, TC, FileID, sep = "_"), ".Rds", sep = "")))
 
-O2Meta <- O2FRRfMeta %>%
-  filter(Dark1s == 0) %>%
-  select(c(SourceDataFile:ObsTime, Ex_WL:LR_s, Filename, StartDateTimeSol, TempContFRRf, ActPARCorr, O2_umolLs, O2evln_O2ls, O2evln_O2lsMIN, Strain, Par_ue, Photoperiod, Temp_c, O2_Category, WL, LightShape))
-             
- 
+O2FRRfMeta <- O2FRRfMeta %>%
+  select(-c("ObsTime", "ObsDateTime", "Time__mSec", "Run.x",  "carQt", "p680Q", "p680Qt", "S/N_raw", "fQB", "PAR_3", "PAR_4", "PAR_5", "PAR_6", "QBP_Size", "Run.y", "Description", "doi", "Inoc_mL", "Media_mL", "ExpCul", "InnocDate", "Source", "SourceSalinity", "Optode", "OptodeCh", "ExpStartTime", "O2lm" ))
 
 
 ```
 
 
 ```{r prelimplot}
-O2Meta %>%
+O2FRRfMeta %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = O2_umolLs, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
@@ -111,27 +108,41 @@ Chl <- readRDS(file.path(ChlDataIn, "PICO_ChlTurnerAll.Rds" ))
 ChlAv <- Chl %>%
   select(-c("Chl_ugL", "Chl_ugmL", "cellsml", "Chla_ugN")) %>%
   unique() %>%
-  select(-c("Strain", "InnocDate", "ExpDate", "Par_ue", "Photoperiod" , "Calculated_µmolPhotons_m-2d-1", "Tube", "O2", "WL","LightShape"))
+  select(-c("Strain", "InnocDate", "ExpDate", "Par_ue", "Photoperiod" , "Calculated_µmolPhotons_m-2d-1", "Tube", "O2", "WL","LightShape", ))
 ```
 
 # Merge O2FRRfMeta & Chl Data
 ```{r merge O2FRRfMeta chl}
-O2Meta <- left_join(x = O2Meta, y = ChlAv, by = join_by("CultureID", "ObsDate" == "DATE"))
+O2FRRfMeta <- left_join(x = O2FRRfMeta, y = ChlAv, by = join_by("CultureID", "ObsDate" == "DATE"))
 
 ```
 
 # O2 per chl
 ```{r o2 per chl}
-O2Meta <- O2Meta %>%
+O2FRRfMeta <- O2FRRfMeta %>%
   mutate(O2_umolugChls = O2_umolLs/(meanChl_ugmL * 1000),
-    O2evln_umolugChls = O2evln_O2ls/(meanChl_ugmL * 1000))
+    O2evln_O2ugChls = O2evln_O2ls/(meanChl_ugmL * 1000))
 ```
 
 
 ```{r O2 chl prelimplot}
-O2Meta %>%
+O2FRRfMeta %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = O2_umolugChls, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = O2evln_O2ugChls, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = ETRCtauav, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
@@ -168,36 +179,42 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 
 ```
 
-Issue with O2FRRfMeta O2 slope models skip ActPARCorr = 0 rows.
 
 # Fit model equations
 ```{r fit models}
-O2Models <- O2Meta %>%
-  nest(data = c("ObsTime", "ActPAR", "ActPARCorr",  "LR_s", "O2_umolLs", "O2evln_O2ls", "O2evln_O2lsMIN", "O2_umolugChls", "O2evln_umolugChls"))
-       
-       ) %>%
+O2Models <- O2FRRfMeta %>%
+  nest(.by = c("ObsDate", "FilenameO2", "Project", "CultureID", "Ex_WL", "YYYYMMDDHHMM", "SourceDataFile", "FilenameFRRf", "Strain", "ExpDate":"Run", "E_days"))
+
+
+
+%>%
   mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc(I = umolphotons_m2_s1, a, Pmax, R),
                               data = .x,
                               start = list(a = 1,
-                                           Pmax = max(.$umolO2_mmolChl1_s1, na.rm = TRUE),
-                                           R = min(.$umolO2_mmolChl1_s1, na.rm = TRUE))
+                                           Pmax = max(.$O2_umolugChls, na.rm = TRUE),
+                                           R = min(.$O2_umolugChls, na.rm = TRUE))
                          ), NULL)
                          )
          ) %>%
   mutate(LRC_Param = map(LRC_model, tidy),
          LRC_Predict = map(LRC_model, augment)) %>%
-  mutate(LRCbeta_model = map(data, possibly(~nlsLM(umolO2_mmolChl1_s1 ~ lrc_beta(I = umolphotons_m2_s1, a, b, g, R),
+  mutate(LRCbeta_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc_beta(I = ActPARCorr, a, b, g, R),
                               data = .x,
                               start = list(a = 1,
                                            b = 1,
                                            g = 1,
-                                           R = min(.$umolO2_mmolChl1_s1, na.rm = TRUE))
+                                           R = min(.$O2_umolugChls, na.rm = TRUE))
                          ), NULL)
                          )
-         ) %>%
+         )
+
+
+
+
+%>%
   mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
          LRCbeta_Predict = map(LRCbeta_model, augment)) %>%
-   mutate(LRCdR_model = map(data,possibly(~nlsLM(umolO2_mmolChl1_s1 ~ lrc_dr(I = umolphotons_m2_s1, a, Pmax, R, d),
+   mutate(LRCdR_model = map(data,possibly(~nlsLM(O2_umolugChls ~ lrc_dr(I = ActPARCorr, a, Pmax, R, d),
                               data = .x,
                               start = list(a = 5,
                                            Pmax = 200,
