@@ -174,8 +174,12 @@ linear <- function(I, m, b){(I*m) + b
 lrc <- function(I, a, Pmax, R){((a * I * Pmax)/((a*I) + Pmax)) - R
 }
 
+# # function with beta photoinhibition
+# lrc_beta <- function(I, a, b, g, R){(a * (((1 - (b*I))/(1 + (g*I)))*I)) - R
+# }
+
 # function with beta photoinhibition
-lrc_beta <- function(I, a, b, g, R){(a * (((1 - (b*I))/(1 + (g*I)))*I)) - R
+lrc_beta <- function(I, a, b, g, R){(a * (((1 - (b*I)))*I)) - R
 }
 
 # function with light-dependent acceleration of Respiration
@@ -187,58 +191,71 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 
 # Fit model equations
 ```{r fit models}
+#prelim fits
+# O2Prelims <- O2FRRfMeta %>%
+#   nest(.by = c("ObsDate", "Project",  "Ex_WL", "Strain", "ExpDate":"Temp_c", "O2_Category", "E_days")) %>%
+#     mutate(Linear_model = map(data, possibly(~lm(O2_umolugChls ~ ActPARCorrinter, data = .)), NULL)
+#                         ) %>%
+#     mutate(Linear_Param = map(Linear_model, tidy)
+#            ) %>%
+#   mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc(I = ActPARCorrinter, a, Pmax, R),
+#                                data = .x,
+#                                start = list(a = (max(.$O2_umolugChls, na.rm = TRUE) - min(.$O2_umolugChls, na.rm = TRUE))/(max(.$ActPARCorrinter, na.rm = TRUE) - min(.$ActPARCorrinter, na.rm = TRUE)),
+#                                             Pmax = max(.$O2_umolugChls, na.rm = TRUE),
+#                                             R = min(.$O2_umolugChls, na.rm = TRUE))
+#                          ), NULL)
+#                           )
+#           ) %>%
+#    mutate(LRC_Param = map(LRC_model, tidy),
+#           LRC_Predict = map(LRC_model, augment))
+
+alpha_est =  (max(O2FRRfMeta$O2_umolugChls, na.rm = TRUE) - min(O2FRRfMeta$O2_umolugChls, na.rm = TRUE))/(max(O2FRRfMeta$ActPARCorrinter, na.rm = TRUE) - min(O2FRRfMeta$ActPARCorrinter, na.rm = TRUE))
+
+
 O2Models <- O2FRRfMeta %>%
-  nest(.by = c("ObsDate", "FilenameO2", "Project", "CultureID", "Ex_WL", "YYYYMMDDHHMM", "SourceDataFile", "FilenameFRRf", "Strain", "ExpDate":"Run", "E_days")) %>%
+  filter(!is.na(E_days)) %>%
+  nest(.by = c("ObsDate", "Project", "Ex_WL", "Strain", "Par_ue":"Temp_c", "O2_Category", "E_days")) %>%
     mutate(Linear_model = map(data, possibly(~lm(O2_umolugChls ~ ActPARCorrinter, data = .)), NULL)
                         ) %>%
     mutate(Linear_Param = map(Linear_model, tidy)
            ) %>%
   mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc(I = ActPARCorrinter, a, Pmax, R),
                                data = .x,
-                               start = list(a = 4E8,
+                               start = list(a = alpha_est,
                                             Pmax = max(.$O2_umolugChls, na.rm = TRUE),
                                             R = min(.$O2_umolugChls, na.rm = TRUE))
                          ), NULL)
                           )
           ) %>%
-   mutate(LRC_Param = map(LRC_model, possibly(tidy), NULL),
-          LRC_Predict = map(LRC_model, augment))
-
-
-
-
-%>%
-
-  #        ) %>%
-  # mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
-  #        LRCbeta_Predict = map(LRCbeta_model, augment))
-  # mutate(LRCbeta_model = map(data, possibly(~nlsLM(O2evln_O2ugChls ~ lrc_beta(I = ActPARCorrinter, a, b, g, R),
-  #                             data = .x,
-  #                             start = list(a = 5E13/100,
-  #                                          b = 5E13/1000,
-  #                                          g = 5E13/1000,
-  #                                          R = min(.$O2_umolugChls, na.rm = TRUE))
-  #                        ), NULL)
-  #                        )
-  #        ) %>%
-  # mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
-  #        LRCbeta_Predict = map(LRCbeta_model, augment))
-
-#%>%
-   # mutate(LRCdR_model = map(data,possibly(~nlsLM(O2_umolugChls ~ lrc_dr(I = ActPARCorrinter, a, Pmax, R, d),
-   #                            data = .x,
-   #                            start = list(a = 5,
-   #                                         Pmax = 200,
-   #                                         R = 100,
-   #                                         d = 0.0001)
-   #                       ), NULL)
-   #                       )
-   #       )
-
-
-# %>%
-#   mutate(LRCdR_Param = map(LRCdR_model, tidy),
-#          LRCdR_Predict = map(LRCdR_model, augment))
+   mutate(LRC_Param = map(LRC_model, tidy),
+          LRC_Predict = map(LRC_model, augment)) %>%
+  mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
+          LRCbeta_Predict = map(LRCbeta_model, augment))
+   mutate(LRCbeta_model = map(data, possibly(~nlsLM(O2evln_O2ugChls ~ lrc_beta(I = ActPARCorrinter, a, b, R),
+                               data = .x,
+                               start = list(a = alpha_est,
+                                            b = alpha_est/10
+                                            R = min(.$O2_umolugChls, na.rm = TRUE))
+                          ), NULL)
+                          )
+          )
+   
+   
+   
+   %>%
+   mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
+          LRCbeta_Predict = map(LRCbeta_model, augment)) %>%
+    mutate(LRCdR_model = map(data,possibly(~nlsLM(O2_umolugChls ~ lrc_dr(I = ActPARCorrinter, a, Pmax, R, d),
+                               data = .x,
+                               start = list(a = alpha_est,
+                                            Pmax = max(.$O2_umolugChls, na.rm = TRUE),
+                                            R = min(.$O2_umolugChls, na.rm = TRUE),
+                                            d = alpha_est/10)
+                          ), NULL)
+                          )
+          )  %>%
+     mutate(LRCdR_Param = map(LRCdR_model, tidy),
+            LRCdR_Predict = map(LRCdR_model, augment))
 
 ```
 
