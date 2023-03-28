@@ -179,7 +179,7 @@ lrc <- function(I, a, Pmax, R){((a * I * Pmax)/((a*I) + Pmax)) - R
 # }
 
 # function with beta photoinhibition
-lrc_beta <- function(I, a, b, g, R){(a * (((1 - (b*I)))*I)) - R
+lrc_beta <- function(I, a, b, R){(a * (((1 - (b*I)))*I)) - R
 }
 
 # function with light-dependent acceleration of Respiration
@@ -214,7 +214,8 @@ alpha_est =  (max(O2FRRfMeta$O2_umolugChls, na.rm = TRUE) - min(O2FRRfMeta$O2_um
 
 O2Models <- O2FRRfMeta %>%
   filter(!is.na(E_days)) %>%
-  nest(.by = c("ObsDate", "Project", "Ex_WL", "Strain", "Par_ue":"Temp_c", "O2_Category", "E_days")) %>%
+  filter(E_days %in% c(3,4,5,7)) %>%
+  nest(.by = c("Project", "Strain", "Ex_WL", "Par_ue":"Temp_c", "O2_Category")) %>%
     mutate(Linear_model = map(data, possibly(~lm(O2_umolugChls ~ ActPARCorrinter, data = .)), NULL)
                         ) %>%
     mutate(Linear_Param = map(Linear_model, tidy)
@@ -223,39 +224,37 @@ O2Models <- O2FRRfMeta %>%
                                data = .x,
                                start = list(a = alpha_est,
                                             Pmax = max(.$O2_umolugChls, na.rm = TRUE),
-                                            R = min(.$O2_umolugChls, na.rm = TRUE))
+                                            R = min(.$O2_umolugChls, na.rm = TRUE)),
+                               control = nls.lm.control(maxiter = 100),
                          ), NULL)
                           )
           ) %>%
    mutate(LRC_Param = map(LRC_model, tidy),
-          LRC_Predict = map(LRC_model, augment)) %>%
-  mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
-          LRCbeta_Predict = map(LRCbeta_model, augment))
-   mutate(LRCbeta_model = map(data, possibly(~nlsLM(O2evln_O2ugChls ~ lrc_beta(I = ActPARCorrinter, a, b, R),
-                               data = .x,
-                               start = list(a = alpha_est,
-                                            b = alpha_est/10
-                                            R = min(.$O2_umolugChls, na.rm = TRUE))
-                          ), NULL)
-                          )
-          )
-   
-   
-   
-   %>%
-   mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
-          LRCbeta_Predict = map(LRCbeta_model, augment)) %>%
+          LRC_Predict = map(LRC_model, augment))  %>%
     mutate(LRCdR_model = map(data,possibly(~nlsLM(O2_umolugChls ~ lrc_dr(I = ActPARCorrinter, a, Pmax, R, d),
                                data = .x,
                                start = list(a = alpha_est,
                                             Pmax = max(.$O2_umolugChls, na.rm = TRUE),
                                             R = min(.$O2_umolugChls, na.rm = TRUE),
-                                            d = alpha_est/10)
+                                            d = alpha_est/10),
+                               control = nls.lm.control(maxiter = 100),
                           ), NULL)
                           )
           )  %>%
      mutate(LRCdR_Param = map(LRCdR_model, tidy),
-            LRCdR_Predict = map(LRCdR_model, augment))
+            LRCdR_Predict = map(LRCdR_model, augment)) %>%
+   mutate(LRCbeta_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc_beta(I = ActPARCorrinter, a, b, R),
+                               data = .x,
+                               start = list(a = alpha_est,
+                                            b = alpha_est/10,
+                                            R = min(.$O2_umolugChls, na.rm = TRUE)),
+                               control = nls.lm.control(maxiter = 100),
+                          ), NULL)
+                          )
+          ) %>%
+  mutate(LRCbeta_Param = map(LRCbeta_model, tidy),
+          LRCbeta_Predict = map(LRCbeta_model, augment))
+  
 
 ```
 
@@ -264,45 +263,50 @@ O2Models <- O2FRRfMeta %>%
 # Adding legend for lines
 #https://community.rstudio.com/t/adding-manual-legend-to-ggplot2/41651/2
 
-line_colours = c("umolO2_mmolChl1_s1" = "green",
+line_colours = c("O2_umolugChls" = "green",
             "fitted" = "black",
             "residual" = "red")
 
 O2Models %>%
   unnest(LRC_Predict) %>%
-  ggplot(aes(x = umolphotons_m2_s1)) +
-  geom_point(aes(y = umolO2_mmolChl1_s1, colour =  "umolO2_mmolChl1_s1")) +
+  ggplot(aes(x = ActPARCorrinter)) +
+  geom_point(aes(y = O2_umolugChls, colour =  "O2_umolugChls")) +
   geom_line(aes(y = `.fitted`, colour = "fitted")) +
   geom_point(aes(y = `.resid`, colour = "residual"), size = 0.5) +
   geom_hline(yintercept = 0, linetype = "dashed") + 
-  labs(colour = "Legend", title = "LRC", subtitle = Operator) + 
+  labs(colour = "Legend", title = "LRC") + 
   scale_colour_manual(values = line_colours) +
   scale_x_continuous(expand = c(0,0)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
   theme_bw()
 
-O2Models %>%
-  unnest(LRCbeta_Predict) %>%
-  ggplot(aes(x = umolphotons_m2_s1)) +
-  geom_point(aes(y = umolO2_mmolChl1_s1, colour =  "umolO2_mmolChl1_s1")) +
-  geom_line(aes(y = `.fitted`, colour = "fitted")) +
-  geom_point(aes(y = `.resid`, colour = "residual"), size = 0.5) +
-  geom_hline(yintercept = 0, linetype = "dashed") + 
-  labs(colour = "Legend", title = "LRCbeta", subtitle = Operator) + 
-  scale_colour_manual(values = line_colours) +
-  scale_x_continuous(expand = c(0,0)) +
-  theme_bw()
 
  O2Models %>%
   unnest(LRCdR_Predict) %>%
-  ggplot(aes(x = umolphotons_m2_s1)) +
-  geom_point(aes(y = umolO2_mmolChl1_s1, colour =  "umolO2_mmolChl1_s1")) +
+  ggplot(aes(x = ActPARCorrinter)) +
+  geom_point(aes(y = O2_umolugChls, colour =  "O2_umolugChls")) +
   geom_line(aes(y = `.fitted`, colour = "fitted")) +
   geom_point(aes(y = `.resid`, colour = "residual"), size = 0.5) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  labs(colour = "Legend", title = "LRCdR", subtitle = Operator) +
+  labs(colour = "Legend", title = "LRCdR") +
   scale_colour_manual(values = line_colours) +
   scale_x_continuous(expand = c(0,0)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
   theme_bw()
+
+ O2Models %>%
+  unnest(LRCbeta_Predict) %>%
+  ggplot(aes(x = ActPARCorrinter)) +
+  geom_point(aes(y = O2_umolugChls, colour =  "O2_umolugChls")) +
+  geom_line(aes(y = `.fitted`, colour = "fitted")) +
+  geom_point(aes(y = `.resid`, colour = "residual"), size = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(colour = "Legend", title = "LRCbeta") +
+  scale_colour_manual(values = line_colours) +
+  scale_x_continuous(expand = c(0,0)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
+  theme_bw()
+
 
 
 ```
