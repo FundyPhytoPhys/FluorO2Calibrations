@@ -611,6 +611,7 @@ All of SySl data then lost; not applicable in this case
 ```
 
 # Fit regressions of FRRf estimators vs. O2evln_O2lsMIN
+Some models fail if intercept forced = 0
 ```{r FRRFO2regressions}
 
 O2FRRfMetaNest <-  O2FRRfMeta %>%
