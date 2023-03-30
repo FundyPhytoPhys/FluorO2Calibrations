@@ -318,10 +318,9 @@ O2Models %>%
 
 
 ```
-XXXXX
-
 
 # Report model parameters
+Failing to report outputs from different model fits; rework.
 ## LRC model parameters
 ```{r LRC model parameters}
 # simple saturating function; rectangular hyperbola
@@ -355,6 +354,7 @@ LRC_Param2
 
 
 ## LRCbeta_model_parameters
+Simplified eqn need to reestimate Pmax and Ek
 ```{r LRCbeta model parameters}
 # function with beta photoinhibition
 # lrc_beta <- function(I, a, b, g, R){(a * (((1 - (b*I))/(1 + (g*I)))*I)) - R
@@ -363,9 +363,9 @@ LRC_Param2
 LRCbeta_Param <- O2Models %>%
   unnest(LRCbeta_Param) %>%
   select(c(term, estimate, std.error)) %>%
-  mutate(Model = "lrc", .before = "term")
+  mutate(Model = "lrcbeta", .before = "term")
 
-LRCbeta_O2compEst <- lrc_beta(I = seq(0,100, by = 1), a = LRCbeta_Param$estimate[LRCbeta_Param$term == "a"], b = LRCbeta_Param$estimate[LRCbeta_Param$term == "b"], g = LRCbeta_Param$estimate[LRCbeta_Param$term == "g"], R = LRCbeta_Param$estimate[LRCbeta_Param$term == "R"])
+LRCbeta_O2compEst <- lrc_beta(I = seq(0,100, by = 1), a = LRCbeta_Param$estimate[LRCbeta_Param$term == "a"], b = LRCbeta_Param$estimate[LRCbeta_Param$term == "b"], R = LRCbeta_Param$estimate[LRCbeta_Param$term == "R"])
 
 O2compEst_beta <- which(abs(LRCbeta_O2compEst - 0) == min(abs(LRCbeta_O2compEst - 0)))
 
@@ -376,9 +376,8 @@ LRCbeta_Param2 <- tibble(Model = "lrc_beta",
                          Value = colnames(LRCbeta_Param)[3:4],
                      a = c(as.numeric(LRCbeta_Param$estimate[1]), as.numeric(LRCbeta_Param$std.error[1])),
                      b = c(as.numeric(LRCbeta_Param$estimate[2]), as.numeric(LRCbeta_Param$std.error[2])),
-                      g = c(as.numeric(LRCbeta_Param$estimate[3]), as.numeric(LRCbeta_Param$std.error[3])),
-                     R = c(as.numeric(LRCbeta_Param$estimate[4]), as.numeric(LRCbeta_Param$std.error[4]))) %>%
-  mutate(Pmax = a*((sqrt(b + g) - sqrt(b))/g)^2,
+                     R = c(as.numeric(LRCbeta_Param$estimate[4]), as.numeric(LRCbeta_Param$std.error[3]))) %>%
+  mutate(Pmax = a*((sqrt(b) - sqrt(b)))^2,
          Pmax_R = Pmax - R,
          EK = Pmax/a,
         O2Comp = c(O2compEst_beta, NA))
