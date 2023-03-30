@@ -449,8 +449,6 @@ O2FRRfMeta %>%
 ```
 
 
-
-
 # Cross plots of O2 evolution and FRRf electron transport estimators
 ```{r O2FRRfcrossplots}
 O2FRRfMeta %>%
