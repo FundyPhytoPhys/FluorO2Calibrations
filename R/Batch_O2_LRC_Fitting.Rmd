@@ -118,10 +118,13 @@ O2FRRfMeta <- left_join(x = O2FRRfMeta, y = ChlAv, by = join_by("CultureID", "Ob
 ```
 
 # O2 per chl
+O2 per cell
 ```{r o2 per chl}
 O2FRRfMeta <- O2FRRfMeta %>%
   mutate(O2_umolugChls = O2_umolLs/(meanChl_ugmL * 1000),
-    O2evln_O2ugChls = O2evln_O2ls/(meanChl_ugmL * 1000))
+    O2evln_O2ugChls = O2evln_O2ls/(meanChl_ugmL * 1000),
+    O2_umolCells = O2_umolLs/(meancellsml * 1000),
+    O2evln_O2Cells = O2evln_O2ls/(meancellsml * 1000))
 ```
 
 
@@ -148,6 +151,28 @@ O2FRRfMeta %>%
   theme_bw()
 ```
 
+```{r O2 cell prelimplot}
+O2FRRfMeta %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y =  O2_umolCells, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = O2evln_O2Cells, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+
+O2FRRfMeta %>%
+  ggplot() +
+  geom_point(aes(x = O2_umolCells, y = O2_umolugChls, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  theme_bw()
+```
 # Define model equations
 Citations: Ma X, Liu Q, Zhang Z, Zhang Z, Zhou Z, Jiang Y, et al. (2021) Effects of photosynthetic models on the calculation results of photosynthetic response parameters in young Larix principis- rupprechtii Mayr. plantation. PLoS ONE 16(12): e0261683. https://doi.org/10.1371/journal.pone.0261683
 
@@ -191,23 +216,6 @@ lrc_dr <- function(I, a, Pmax, R, d){((a * I * Pmax)/((a*I) + Pmax)) - (R + (R *
 
 # Fit model equations
 ```{r fit models}
-#prelim fits
-# O2Prelims <- O2FRRfMeta %>%
-#   nest(.by = c("ObsDate", "Project",  "Ex_WL", "Strain", "ExpDate":"Temp_c", "O2_Category", "E_days")) %>%
-#     mutate(Linear_model = map(data, possibly(~lm(O2_umolugChls ~ ActPARCorrinter, data = .)), NULL)
-#                         ) %>%
-#     mutate(Linear_Param = map(Linear_model, tidy)
-#            ) %>%
-#   mutate(LRC_model = map(data, possibly(~nlsLM(O2_umolugChls ~ lrc(I = ActPARCorrinter, a, Pmax, R),
-#                                data = .x,
-#                                start = list(a = (max(.$O2_umolugChls, na.rm = TRUE) - min(.$O2_umolugChls, na.rm = TRUE))/(max(.$ActPARCorrinter, na.rm = TRUE) - min(.$ActPARCorrinter, na.rm = TRUE)),
-#                                             Pmax = max(.$O2_umolugChls, na.rm = TRUE),
-#                                             R = min(.$O2_umolugChls, na.rm = TRUE))
-#                          ), NULL)
-#                           )
-#           ) %>%
-#    mutate(LRC_Param = map(LRC_model, tidy),
-#           LRC_Predict = map(LRC_model, augment))
 
 alpha_est =  (max(O2FRRfMeta$O2_umolugChls, na.rm = TRUE) - min(O2FRRfMeta$O2_umolugChls, na.rm = TRUE))/(max(O2FRRfMeta$ActPARCorrinter, na.rm = TRUE) - min(O2FRRfMeta$ActPARCorrinter, na.rm = TRUE))
 
