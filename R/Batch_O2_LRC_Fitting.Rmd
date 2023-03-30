@@ -215,7 +215,7 @@ alpha_est =  (max(O2FRRfMeta$O2_umolugChls, na.rm = TRUE) - min(O2FRRfMeta$O2_um
 O2Models <- O2FRRfMeta %>%
   filter(!is.na(E_days)) %>%
   filter(E_days %in% c(3,4,5,7)) %>%
-  nest(.by = c("Project", "Strain", "Ex_WL", "Par_ue":"Temp_c", "O2_Category")) %>%
+  nest(.by = c("Project", "Strain", "Ex_WL", "Par_ue":"Temp_c", "WL", "O2_Category")) %>%
     mutate(Linear_model = map(data, possibly(~lm(O2_umolugChls ~ ActPARCorrinter, data = .)), NULL)
                         ) %>%
     mutate(Linear_Param = map(Linear_model, tidy)
@@ -277,7 +277,7 @@ O2Models %>%
   labs(colour = "Legend", title = "LRC") + 
   scale_colour_manual(values = line_colours) +
   scale_x_continuous(expand = c(0,0)) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue, WL)) +
   theme_bw()
 
 
@@ -291,7 +291,7 @@ O2Models %>%
   labs(colour = "Legend", title = "LRCdR") +
   scale_colour_manual(values = line_colours) +
   scale_x_continuous(expand = c(0,0)) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue, WL)) +
   theme_bw()
 
  O2Models %>%
@@ -304,12 +304,14 @@ O2Models %>%
   labs(colour = "Legend", title = "LRCbeta") +
   scale_colour_manual(values = line_colours) +
   scale_x_continuous(expand = c(0,0)) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(Strain, Par_ue, WL)) +
   theme_bw()
 
 
 
 ```
+XXXXX
+
 
 # Report model parameters
 ## LRC model parameters
