@@ -1,0 +1,366 @@
+---
+title: "SolisenseImport"
+author:
+- Maximilian Berthold
+- Douglas A. Campbell
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    df_print: paged
+    code_folding: hide
+    keep_md: yes
+    fig_caption: yes
+    toc: TRUE
+    toc_float: TRUE   
+csl: plos-one.csl
+---
+
+
+test 
+
+This .Rmd imports and tidys fit data from the Solisense kinetic fluorometer software.
+It does not perform the underlying fits of the induction/relaxation profiles from FRRf protocols.
+
+# Done
+Corrected values for Excitation; this 'happens' during the re-fit if the proper calibration file settings are chosen
+  Refit needs to be done separately for data from Cuvette & Data from water jacket; TC/no TC will need to be segregated somehow.
+  
+Corrected values for ActPAR for cuvette (no TC) and for jacket (TC)
+  Recalibration for ActPAR to ActPARCorr done post-hoc herein
+
+Add more ETR estimators  
+  
+# Set Chunk Options
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(fig.path='Figs/')
+```
+
+# Set Project Variables
+```{r set project variables}
+Project <- "FluorO2"
+DataOut <- file.path("..", "ImportData", "FRRf")
+CalibData <- file.path("..", "CalibrationData")
+
+Run <- "MiSaProchloro"
+
+DataIn <- file.path("..", "RawData", "MiSa", "Solisense", fsep = .Platform$file.sep)
+
+FileID <- "fit"
+
+FileEncode <- "UTF-8" 
+Delimiter <- ","
+
+HeaderRows <- 0
+
+```
+
+```{r conversions}
+us_s <- 1000000
+photons_umol <- 6.022E17
+A2_m2 <- 1E20
+```
+
+
+```{r load libraries}
+library(tidyverse)
+library(lubridate)
+library(photobiologyWavebands) #R colours from nm values
+library(broom) #formatting model outputs
+
+#https://googlesheets4.tidyverse.org/
+# library(googledrive)
+# library(googlesheets4)
+
+```
+
+```{r read ActPAR calibration files}
+#ActPARCal <- readRDS("~/Dropbox/CampbellLabProtocols/ChlorophyllFluorescence/SolisenseInformation/SolisenseInformation_DCCalibParam.Rds")
+
+ActPARCrossCal <- list.files(path = CalibData, full.names = TRUE)  %>%
+       map_df(~readRDS(file  = .))
+
+#intercept set to 0 in lm in SolisenseInformation.Rproj/SolisenseCalibCompare.Rmd
+ActPARCrossCal <- ActPARCrossCal |>
+  rename(#Intercept = `estimate_(Intercept)`,
+         Slope = `estimate_LIFT_Gen_Developer.cal`,
+         #Intercept_SE = `std.error_(Intercept)`,
+         Slope_SE = `std.error_LIFT_Gen_Developer.cal`)
+```
+
+```{r set colours}
+Wavelengths_nm = c(445, 470, 505, 535, 590)
+Colours_nm = c(w_length2rgb(445), w_length2rgb(470), w_length2rgb(505),  w_length2rgb(535), w_length2rgb(590))
+names(Colours_nm) <-  Wavelengths_nm
+
+```
+
+```{r list PSI files for file import}
+SolisenseFiles <- list.files(path = DataIn, pattern = FileID, full.names = TRUE, recursive = FALSE)
+
+SolisenseFiles
+
+#test for duplicate file names
+unique(duplicated(SolisenseFiles))
+```
+
+
+```{r data read adds filename and cdate, warning=FALSE, message=FALSE, echo=FALSE}
+#design choice 2 file reading functions or add a filetype variable to a single function
+#stringsAsFactors =FALSE somewhere? 
+# 
+# read.delim_plus <- function(flnm, file_encode, delimiter, header_rows){read.delim(flnm, fileEncoding = file_encode, sep = delimiter,  skip = header_rows, row.names = NULL) %>% mutate(filename = flnm, cdatetime = ymd_hms(file.info(flnm)$ctime))
+# }
+
+#a read function using tidyverse::read_delim that skips a fixed number of header rows, and adds columns to the dataframe containing the filename and the file creation date time.
+read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
+    mutate(Filename = flnm)
+  }
+
+
+```
+
+Read Test File
+```{r read example Solisense file}
+#issue with rows with --------;  easy to filter though
+# TestFile <- read.delim_plus(flnm = "../RawData/Solisense/MURIS_202105121400_MaBe3414_445_caloxy_fit.csv", file_encode = FileEncode, delimiter = Delimiter, header_rows = HeaderRows)
+
+```
+
+purrr::map to read all files
+```{r read Solisense files}
+SolFits <- SolisenseFiles %>%
+  map_df(~read_delim_plus(flnm =., delimiter = Delimiter, headerrows = HeaderRows, fileencode = FileEncode))
+
+head(SolFits)
+colnames(SolFits)
+
+```
+
+
+```{r tidy SolFitsTrim}
+#Think of better ways to do this
+
+SolFitsTrim <- SolFits %>% 
+  filter(!grepl("----", DATE)) %>% # remove rows with "----" in DATE
+  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...39`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
+  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/"),
+         Filename = str_remove(string = Filename, pattern = "_caloxy"),
+         Filename = str_remove(string = Filename, pattern = "_refit.csv")
+         ) %>%
+  separate(Filename, into = c("Project", "RunDateTime", "CultureID", "Ex_WL"), sep = "([\\/\\_])", remove = FALSE) %>%
+  mutate(RunDateTime = ymd_hm(RunDateTime), 
+         TIME = as.character(TIME)) %>%  #time-column may be read in as factor, and as.character changes it to numeric; using lubdridate::hms would only change the format to 13H 4M 2S but does not work later to merge into one DateTime-column
+  rename(SourceDataFile = `Source DataFile`,
+         ObsDate = DATE,
+         ObsTime = TIME,
+         FvFm = "Fv/Fm") %>%
+  mutate(Ex_WL = as.factor(as.numeric(Ex_WL))) %>%
+  mutate(FvFm = as.numeric(as.character(FvFm)),
+         nm445 = as.numeric(as.character(Light_1)),
+         nm470 = as.numeric(as.character(Light_2)),
+         nm505 = as.numeric(as.character(Light_3)),
+         nm535 = as.numeric(as.character(Light_4)),
+         nm590 = as.numeric(as.character(Light_5)),
+         IR = as.numeric(as.character(Light_6))
+         ) %>%
+  rename(StartDateTimeSol = RunDateTime) %>%
+  drop_na(StartDateTimeSol) %>%
+  mutate(ObsTime = hms(ObsTime),
+         ObsDate = ymd(ObsDate)) %>%
+  mutate(ObsDateTime = ymd_hms(paste(ObsDate, ObsTime))) %>%
+  relocate(ObsDateTime, .after = ObsTime) %>%
+  relocate(CultureID, .before = ObsDate) 
+
+#for consistency add TempCont column
+SolFitsTrim <- SolFitsTrim %>%
+  mutate(TempCont = "TC")
+
+head(SolFitsTrim)
+```
+
+
+```{r actparcorr}
+#Add ActPARcorr with proper correction factors for TC and no TC
+#Intercepts for cross conversions set to 0.
+
+#Some smarter way to do this with map etc....
+SolFitsTrim <- SolFitsTrim |> 
+  mutate(nm445Corr = case_when(TempCont == "TC" ~ nm445 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr1_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ nm445 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr1_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]),
+         nm470Corr = case_when(TempCont == "TC" ~ nm470 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr2_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ nm470 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr2_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]),
+         nm505Corr = case_when(TempCont == "TC" ~ nm505 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr3_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ nm505 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr3_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]),
+           nm535Corr = case_when(TempCont == "TC" ~ nm535 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr4_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ nm535 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr4_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]),
+          nm590Corr = case_when(TempCont == "TC" ~ nm590 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr5_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ nm590 * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "Pwr5_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]),
+          IRCorr = case_when(TempCont == "TC" ~ IR * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "PwrIR_uE" & ActPARCrossCal$Models == "DCWaterJacketlm_tidy"],
+                                 TempCont == "noTC" ~ IR * ActPARCrossCal$Slope[ActPARCrossCal$DCLamp == "PwrIR_uE" & ActPARCrossCal$Models == "DCCuvettelm_tidy"]))
+
+head(SolFitsTrim)
+
+
+SolFitsTrim <- SolFitsTrim %>%
+  mutate(across(.cols = c(Light_1:CarQ), .fns = as.numeric)) %>%
+  mutate(ActPAR = nm445 + nm470 + nm505 + nm535 + nm590 + IR) |>
+  mutate(ActPARCorr = nm445Corr + nm470Corr + nm505Corr + nm535Corr + nm590Corr + IRCorr)#better ways to do this?
+
+```
+
+```{r durations}
+#generate column with duration of light step in s
+#add a column adding Dark1s based upon any step < 5 s
+#replace NA for first dark with nominal 181;  issue will be changing durations of light steps across each run
+SolFitsTrim <- SolFitsTrim %>%
+  group_by(SourceDataFile, Filename, Project, CultureID, ObsDate, Ex_WL, TempCont) %>%
+  #mutate(Step_s = as.numeric(ObsDateTime - lag(ObsDateTime)), .after = ObsDateTime) %>%
+  mutate(Step_s = replace_na(as.numeric(ObsDateTime - lag(ObsDateTime)), 181), .after = ObsDateTime) %>% 
+  mutate(LR_s = as.numeric(ObsDateTime - ObsDateTime[1]), .after = Step_s) %>%
+  mutate(Dark1s = if_else(Step_s > 5, 0, 1), .after = Step_s) %>%
+  relocate(Ex_WL, .after = Dark1s) %>%
+  relocate(ActPAR, .after = Ex_WL) %>%
+  ungroup()
+#Figure out how to cope with final step at 0 PAR, not followed by Dark1s step
+#separate Dark1s rows
+#Figure out how to re-match Dark1s to appropriate light steps
+
+```
+
+```{r}
+# test <- SolFitsTrim %>%
+#   filter(Ex_WL == "505" & CultureID == "SySl1191")
+```
+
+
+```{r prelimplots}
+SolFitsTrim %>%
+  filter(Dark1s == 0) %>%
+  filter(Tau2QA < 20000) %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = FvFm, colour = as.factor(TempCont))) +
+  #scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  theme_bw()
+
+SolFitsTrim %>%
+  filter(Dark1s == 0) %>%
+  filter(Tau2QA < 20000) %>%
+  ggplot() +
+  geom_point(aes(x = LR_s, y = Tau2QA, colour = as.factor(TempCont), size = LR_s)) +
+  #scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  theme_bw()
+
+SolFitsTrim %>%
+  #filter(Dark1s != 0) %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = Alp2QA, colour = as.factor(TempCont), size = LR_s)) +
+  #scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  theme_bw() 
+
+```
+
+Oxborough & Baker 1997 for Fo'
+```{r estimate parameters}
+#think about nest_by and map?
+SolFitsTrim2 <- SolFitsTrim %>%
+  mutate(WtTau = ((Alp1QA * Tau1QA) + (Alp2QA * Tau2QA) + (Alp3QA * Tau3QA)),
+         InvWtTau = 1/WtTau,
+         Sig_m2psii = Sig/1E20,
+         ActPAR_photonsm2s = ActPAR *  6.022e17,
+         C_WtTau = 1/(1 + (Sig_m2psii * ActPAR_photonsm2s * (WtTau /1000000)))
+         ) %>%
+  nest(.by = c(CultureID, Ex_WL, SourceDataFile, Filename, ObsDate )) %>%
+   mutate(Fodark = map(data, ~.$Fo[1]),
+          Fmdark = map(data, ~.$Fm[1]),
+          Fomin = map(data, ~min(.$Fo, na.rm = TRUE)), 
+          Fmmax = map(data, ~max(.$Fm, na.rm = TRUE)),
+          Sigdark = map(data, ~.$Sig[1]),
+          Sigmax = map(data, ~max(.$Sig, na.rm = TRUE)),
+          qp = map(data, ~(.$Fm - .$Fo)/(.$Fm - lead(.$Fo)))
+          ) %>%
+  unnest(cols = c(data, Fodark,Fmdark,Fomin, Fmmax,Sigdark,Sigmax, qp)) %>%
+  mutate(aLHIIdark = (Fmdark * Fodark)/(Fmdark - Fodark),
+         aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
+         FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)),
+         qpOxbo = (Fm - Fo)/(Fm - FoOxbo),
+         JVPSII_aLHIIminmax = ActPAR_photonsm2s * aLHIIminmax * FvFm,
+         JVPSII_aLHIIdark = ActPAR_photonsm2s * aLHIIdark * FvFm,
+         ETRC_WtTau = Sig_m2psii * C_WtTau * ActPAR_photonsm2s,
+         ETRqp = Sig_m2psii * qp * ActPAR_photonsm2s,
+        ETRqpOxbo = Sig_m2psii * qpOxbo * ActPAR_photonsm2s,
+         JVPSII_ETRC_WtTau = ETRC_WtTau * Fomin/Sigmax * ActPAR_photonsm2s,
+         JVPSII_ETRqp = ETRqp * Fomin/Sigmax * ActPAR_photonsm2s,
+         JVPSII_ETRqpOxbo = ETRqpOxbo * Fomin/Sigmax * ActPAR_photonsm2s
+        )
+
+       
+ head(SolFitsTrim2)
+```
+
+```{r prelimplots2}
+
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x = ActPARCorr, y = ETRqpOxbo, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  theme(strip.text.y = element_text(size = 5, angle=0)) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
+
+
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x = ETRqp, y = ETRqpOxbo, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
+  coord_fixed(ratio = 1) +
+  theme(strip.text.y = element_text(size = 5, angle=0)) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
+
+
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x = C_WtTau, y = qpOxbo, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
+  coord_fixed(xlim = c(0,1), ylim = c(0,1), ratio = 1) +
+  theme(strip.text.y = element_text(size = 5, angle=0)) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
+
+
+
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
+  #coord_fixed(ratio = 1) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  theme(strip.text.y = element_text(size = 5, angle=0)) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
+
+
+```
+
+
+```{r save SolFitsTrim data}
+saveRDS(SolFitsTrim2, file.path(DataOut, paste(Project, Run, "SolFitsTrim.Rds", sep = "_"), fsep = .Platform$file.sep))
+```
+
+
