@@ -97,7 +97,6 @@ Improve this if we generalize the approach.
 
 
 This chunk reads in a MetaData catalog from googlesheets
-Optode Data already merged with MetaData but workflow needs a re-merger.
 ```{r load Catalog, now as a google sheet}
 gs4_deauth()
 
@@ -237,7 +236,7 @@ colnames(O2Data)
 
 colnames(FRRfDataLight)
 
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL", "LR_s", "TempCont", "Project"), suffix = c("O2", "FRRf"), keep = FALSE)
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL", "LR_s", "TempCont"), suffix = c("O2", "FRRf"), keep = FALSE)
 
 #"GrowthLight",
 
@@ -309,7 +308,7 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
