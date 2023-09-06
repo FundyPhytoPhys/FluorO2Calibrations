@@ -764,6 +764,8 @@ saveRDS(O2FRRfMetaModels, file.path(DataOut, paste(Project, Run, Cuvette, "O2FRR
 
 saveRDS(JVPSII_O2_ModelTermsParam, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_O2_ModelTermsParam.Rds", sep = "_"), fsep = .Platform$file.sep))
 
+saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
+
 ```
 
 
