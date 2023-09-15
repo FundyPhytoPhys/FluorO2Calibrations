@@ -314,7 +314,7 @@ Filter out first `r induction_s` s of each ActPARCorrinter set to skip 'inductio
 Stop fitting at `r_end_s`
 
 ```{r O2slopes}
-induction_s = 60
+induction_s = 60 #hack solution to only take slope of O2 well within given light level
 end_s = 170
 
 O2Slopes <- O2SlopeDataClean %>%
@@ -533,6 +533,7 @@ Graphical Test for stability of [PSII] estimates.
 ```{r PSIIstabilitytestplot}
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
+  filter(Ex_WL == 470) |>
   ggplot() +
   geom_point(aes(y  = (O2evln_O2ls * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
@@ -752,7 +753,11 @@ JVPSII_O2_ModelParam <- O2FRRfMetaNest %>%
     separate(col = ModelParam, into = c("Model", "Param"), sep = "_O2_param_") %>%
      pivot_wider(names_from = "Param", values_from = "value")
 
-JVPSII_O2_ModelTermsParam <- left_join(JVPSII_O2_ModelTerms, JVPSII_O2_ModelParam, by = c("Ex_WL", "Model"))
+JVPSII_O2_ModelTermsParam <- left_join(JVPSII_O2_ModelTerms, JVPSII_O2_ModelParam, by = c("Ex_WL", "Model")) |>
+  mutate(SESlope = Slope_std.error/Slope_estimate, .before = Slope_p.value)
+
+JVPSII_O2_ModelTermsParam
+  
 
 ```
 
