@@ -285,18 +285,18 @@ SolFitsTrim2 <- SolFitsTrim %>%
           qp = map(data, ~(.$Fm - .$Fo)/(.$Fm - lead(.$Fo)))
           ) %>%
   unnest(cols = c(data, Fodark,Fmdark,Fomin, Fmmax,Sigdark,Sigmax, qp)) %>%
-  mutate(aLHIIdark = (Fmdark * Fodark)/(Fmdark - Fodark),
-         aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
-         FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)),
-         qpOxbo = (Fm - Fo)/(Fm - FoOxbo),
-         JVPSII_aLHIIminmax = ActPAR_photonsm2s * aLHIIminmax * FvFm,
-         JVPSII_aLHIIdark = ActPAR_photonsm2s * aLHIIdark * FvFm,
-         ETRC_WtTau = Sig_m2psii * C_WtTau * ActPAR_photonsm2s,
-         ETRqp = Sig_m2psii * qp * ActPAR_photonsm2s,
-        ETRqpOxbo = Sig_m2psii * qpOxbo * ActPAR_photonsm2s,
-         JVPSII_ETRC_WtTau = ETRC_WtTau * Fomin/Sigmax * ActPAR_photonsm2s,
-         JVPSII_ETRqp = ETRqp * Fomin/Sigmax * ActPAR_photonsm2s,
-         JVPSII_ETRqpOxbo = ETRqpOxbo * Fomin/Sigmax * ActPAR_photonsm2s
+  mutate(aLHIIdark = (Fmdark * Fodark)/(Fmdark - Fodark), # uncalibrated estimate of absorbance serving PSII
+         aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),# uncalibrated estimate of absorbance serving PSII
+         FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)), # oxbor estimate of Fo'
+         qpOxbo = (Fm - Fo)/(Fm - FoOxbo), # estimate of the fraction of PSII closed
+         JVPSII_aLHIIminmax = ActPAR_photonsm2s * aLHIIminmax * FvFm, # uncal est of e L-1 s-1
+         JVPSII_aLHIIdark = ActPAR_photonsm2s * aLHIIdark * FvFm,# uncal est of e L-1 s-1
+         ETRC_WtTau = Sig_m2psii * C_WtTau * ActPAR_photonsm2s, # est e PSII-1 s-1 using fraction open PSII 
+         ETRqp = Sig_m2psii * qp * ActPAR_photonsm2s, # est for e PSII -1 s-1 using fract PSII from double tap
+        ETRqpOxbo = Sig_m2psii * qpOxbo * ActPAR_photonsm2s, # est e PSII-1 s-1 from Oxo algorithm
+         JVPSII_ETRC_WtTau = ETRC_WtTau * Fomin/Sigmax, # est uncalibrated e L-1 s-1 
+         JVPSII_ETRqp = ETRqp * Fomin/Sigmax, # est uncalibrated e L-1 s-1
+         JVPSII_ETRqpOxbo = ETRqpOxbo * Fomin/Sigmax # est uncalibrated e L-1 s-1
         )
 
        
