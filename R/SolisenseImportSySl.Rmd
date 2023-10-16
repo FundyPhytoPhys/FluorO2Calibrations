@@ -290,12 +290,13 @@ SolFitsTrim2 <- SolFitsTrim %>%
          Sigmax = max(Sig, na.rm = TRUE),
          aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
          aLHIIOxbomax = (Fmmax * FoOxbo)/(Fmmax - FoOxbo),
+         Sigmax_m2psii = Sigmax/A2_m2,
          Sig_m2psii = Sig/A2_m2,
          ActPARCorr_photonsm2s = ActPARCorr *  photons_umol,
          #Ctau1 = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (Tau1QA/us_s))),
          #Ctau2 = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (Tau2QA/us_s))),
          C_TauAv = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (TauAv/us_s))),
-         #qp = (Fm - Fo)/(Fm - lead(Fo)), #(Fm' - Fs)/(Fm' - Fo'); messes up every 2nd row from double tap data but then filter out rows from 'dark'
+         qp = (Fm - Fo)/(Fm - lead(Fo)), #(Fm' - Fs)/(Fm' - Fo'); messes up every 2nd row from double tap data but then filter out rows from 'dark'
          qpOxbo = (Fm - Fo)/(Fm - FoOxbo),
          JVPSII_aLHIIminmax = ActPARCorr_photonsm2s * aLHIIminmax * FvFm, #issue with FvFm in cyanobacteria; minimized with blue light excitation
          JVPSII_aLHIIdark = ActPARCorr_photonsm2s * aLHIIdark * FvFm,
@@ -303,17 +304,23 @@ SolFitsTrim2 <- SolFitsTrim %>%
          #ETRCtau1 = Sig_m2psii * Ctau1 * ActPARCorr_photonsm2s,
          #ETRCtau2 = Sig_m2psii * Ctau2 * ActPARCorr_photonsm2s,
          ETRC_TauAv = Sig_m2psii * C_TauAv * ActPARCorr_photonsm2s,
-         #ETRqp = Sig_m2psii * qp * ActPARCorr_photonsm2s, # est for e PSII -1 s-1 using fract PSII from double tap
+         ETRqp = Sig_m2psii * qp * ActPARCorr_photonsm2s, # est for e PSII -1 s-1 using fract PSII from double tap
          ETRqpOxbo = Sig_m2psii * qpOxbo * ActPARCorr_photonsm2s,
          #ETRGorbo = (1/TauAv[7])*((ActPARCorr*FvFm)/(ActPARCorr[7]*FvFm[7])) * us_s,
          TestTauAvSat = 1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)],
          # ETRGorbo = (1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])*((ActPARCorr_photonsm2s*FvFm)/(max(ActPARCorr_photonsm2s))*(FvFm[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])) * us_s,
                                                                                     #Pmax x scaling for change in yield and light
 #relies upon phiPSII which is not absolute in cyanos
-         JVPSII_ETRC_TauAv_FoSig = ETRC_TauAv * Fomin/Sigmax, #Sigmax not converted A2_m2
-         JVPSII_ETRqpOxbo_FoSig = ETRqpOxbo * Fomin/Sigmax,
-         JVPSII_ETRC_TauAv_aLHII_Sig = ETRC_TauAv * aLHIIOxbomax/Sigmax,
-         JVPSII_ETRqpOxbo_aLHII_Sig = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
+         JVPSII_ETRC_TauAv_FoSigmax_m2psii = ETRC_TauAv * Fomin/Sigmax_m2psii, 
+         JVPSII_ETRC_TauAv_FoSigmax_A2psii = ETRC_TauAv * Fomin/Sigmax, #Sigmax as A2
+         JVPSII_ETRqp_FoSigmax_m2psii = ETRqp * Fomin/Sigmax_m2psii, # Sigmax as m2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqp_FoSigmax_A2psii = ETRqp * Fomin/Sigmax, # Sigmax as A2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqpOxbo_FoSigmax_m2psii = ETRqpOxbo * Fomin/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_FoSigmax_A2psii = ETRqpOxbo * Fomin/Sigmax, #Sigmax as A2
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_A2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_A2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
   ungroup()
        
  head(SolFitsTrim2)
@@ -356,7 +363,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRC_TauAv_FoSig, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   theme_bw()
@@ -365,7 +372,7 @@ SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = 
-         JVPSII_ETRqpOxbo_FoSig, y = JVPSII_ETRC_TauAv_aLHII_Sig, colour = Ex_WL)) +
+         JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
@@ -377,7 +384,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x =  JVPSII_ETRqpOxbo_FoSig, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
