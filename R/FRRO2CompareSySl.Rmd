@@ -693,7 +693,7 @@ saveRDS(JVPSII_O2_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "J
 saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 
-#JVPSII O2 calibration to PicoBaltic
+#JVPSII O2 calibration to BalticPhotoperiod
 saveRDS(JVPSII_O2_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_O2_ModelTerms.Rds", fsep = .Platform$file.sep))
 
 ```
