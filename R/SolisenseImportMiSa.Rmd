@@ -93,8 +93,9 @@ ActPARCrossCal <- ActPARCrossCal |>
 ```{r set colours}
 Wavelengths_nm = c(445, 470, 505, 535, 590)
 Colours_nm = c(w_length2rgb(445), w_length2rgb(470), w_length2rgb(505),  w_length2rgb(535), w_length2rgb(590))
-names(Colours_nm) <-  Wavelengths_nm
 
+names(Colours_nm) <-  Wavelengths_nm
+Colours_nm
 ```
 
 ```{r list PSI files for file import}
@@ -115,10 +116,12 @@ unique(duplicated(SolisenseFiles))
 # }
 
 #a read function using tidyverse::read_delim that skips a fixed number of header rows, and adds columns to the dataframe containing the filename and the file creation date time.
-read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
-    mutate(Filename = flnm)
-  }
 
+
+read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
+    mutate(Filename = flnm,
+           Cdatetime = ymd_hms(file.info(flnm)$ctime))
+}
 
 ```
 
@@ -138,6 +141,9 @@ head(SolFits)
 colnames(SolFits)
 
 ```
+
+
+
 
 
 ```{r tidy SolFitsTrim}
@@ -205,7 +211,7 @@ head(SolFitsTrim)
 
 
 SolFitsTrim <- SolFitsTrim %>%
-  mutate(across(.cols = c(Light_1:CarQ), .fns = as.numeric)) %>%
+  mutate(across(.cols = c(Light_1:ETR), .fns = as.numeric)) %>%
   mutate(ActPAR = nm445 + nm470 + nm505 + nm535 + nm590 + IR) |>
   mutate(ActPARCorr = nm445Corr + nm470Corr + nm505Corr + nm535Corr + nm590Corr + IRCorr)#better ways to do this?
 
@@ -268,41 +274,56 @@ SolFitsTrim %>%
 Oxborough & Baker 1997 for Fo'
 ```{r estimate parameters}
 #think about nest_by and map?
+#Mireille added group_by and removed the nest as per MaBe and Sysl Import scripts
+
 SolFitsTrim2 <- SolFitsTrim %>%
-  mutate(WtTau = ((Alp1QA * Tau1QA) + (Alp2QA * Tau2QA))/(Apl1QA + Alp2QA),
-         InvWtTau = 1/WtTau,
-         Sig_m2psii = Sig/1E20,
-         ActPAR_photonsm2s = ActPAR *  6.022e17,
-         ActPARCorr_photonsm2s = ActPARCorr *  6.022e17,
-         C_WtTau = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (WtTau /1000000)))
+  group_by(SourceDataFile, Filename, Project, ObsDate, CultureID, Ex_WL, TempCont) %>%
+  mutate(TauAv = ((Alp1QA * Tau1QA) + (Alp2QA * Tau2QA))/(Alp1QA + Alp2QA),
+         InvTauAv = 1/TauAv,
+         ActPARCorr_photonsm2s = ActPARCorr *  photons_umol
          ) %>%
-  nest(.by = c(CultureID, Ex_WL, SourceDataFile, Filename, ObsDate )) %>%
-   mutate(Fodark = map(data, ~.$Fo[1]),
-          Fmdark = map(data, ~.$Fm[1]),
-          Fomin = map(data, ~min(.$Fo, na.rm = TRUE)), 
-          Fmmax = map(data, ~max(.$Fm, na.rm = TRUE)),
-          Sigdark = map(data, ~.$Sig[1]),
-          Sigmax = map(data, ~max(.$Sig, na.rm = TRUE)),
-          qp = map(data, ~(.$Fm - .$Fo)/(.$Fm - lead(.$Fo)))
+   mutate(Fodark = Fo[1],
+          Fmdark = Fm[1],
+          Sigdark = Sig[1],
+          Fomin = min(Fo, na.rm = TRUE),
+          Fmmax = max(Fm, na.rm = TRUE),
+          Sigmax = max(Sig, na.rm = TRUE),
+          Sigmax_m2psii = Sigmax/A2_m2,
+          Sig_m2psii = Sig/A2_m2,
+          C_TauAv = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (TauAv /us_s))),
+          FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)), # oxbor estimate of Fo'
+          qpOxbo = (Fm - Fo)/(Fm - FoOxbo), # estimate of the fraction of PSII closed
+          qp = (Fm - Fo)/(Fm - lead(Fo))
           ) %>%
-  unnest(cols = c(data, Fodark,Fmdark,Fomin, Fmmax,Sigdark,Sigmax, qp)) %>%
+  
+     
+  
   mutate(aLHIIdark = (Fmdark * Fodark)/(Fmdark - Fodark), # uncalibrated estimate of absorbance serving PSII
          aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),# uncalibrated estimate of absorbance serving PSII
-         FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)), # oxbor estimate of Fo'
-         qpOxbo = (Fm - Fo)/(Fm - FoOxbo), # estimate of the fraction of PSII closed
+         aLHIIOxbomax = (Fmmax * FoOxbo)/(Fmmax - FoOxbo),
          JVPSII_aLHIIminmax = ActPARCorr_photonsm2s * aLHIIminmax * FvFm, # uncal est of e L-1 s-1
          JVPSII_aLHIIdark = ActPARCorr_photonsm2s * aLHIIdark * FvFm,# uncal est of e L-1 s-1
-         ETRC_WtTau = Sig_m2psii * C_WtTau * ActPARCorr_photonsm2s, # est e PSII-1 s-1 using fraction open PSII 
+         JVPSII_aLHIIOxbomax = ActPARCorr_photonsm2s * aLHIIOxbomax * FvFm,
+         ETRC_TauAv = Sig_m2psii * C_TauAv * ActPARCorr_photonsm2s, # est e PSII-1 s-1 using fraction open PSII 
          ETRqp = Sig_m2psii * qp * ActPARCorr_photonsm2s, # est for e PSII -1 s-1 using fract PSII from double tap
-        ETRqpOxbo = Sig_m2psii * qpOxbo * ActPARCorr_photonsm2s, # est e PSII-1 s-1 from Oxo algorithm
-         JVPSII_ETRC_WtTau = ETRC_WtTau * Fomin/Sigmax, # est uncalibrated e L-1 s-1 
-         JVPSII_ETRqp = ETRqp * Fomin/Sigmax, # est uncalibrated e L-1 s-1
-         JVPSII_ETRqpOxbo = ETRqpOxbo * Fomin/Sigmax # est uncalibrated e L-1 s-1
-        )
+         ETRqpOxbo = Sig_m2psii * qpOxbo * ActPARCorr_photonsm2s, # est e PSII-1 s-1 from Oxo algorithm
+         JVPSII_ETRC_TauAv_FoSigmax_m2psii = ETRC_TauAv * Fomin/Sigmax_m2psii,#Sigmax as m2, est uncalibrated e L-1 s-1
+         JVPSII_ETRC_TauAv_FoSigmax_A2psii = ETRC_TauAv * Fomin/Sigmax, #Sigmax as A2, est uncalibrated e L-1 s-1 
+         JVPSII_ETRqp_FoSigmax_m2psii = ETRqp * Fomin/Sigmax_m2psii, # Sigmax as m2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqp_FoSigmax_A2psii = ETRqp * Fomin/Sigmax, # Sigmax as A2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqpOxbo_FoSigmax_m2psii = ETRqpOxbo * Fomin/Sigmax_m2psii,#Sigmax as m2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqpOxbo_FoSigmax_A2psii = ETRqpOxbo * Fomin/Sigmax, #Sigmax as A2, est uncalibrated e L-1 s-1
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_A2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_A2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
 
-       
- head(SolFitsTrim2)
+  ungroup()
+  
+  head(SolFitsTrim2)
+
 ```
+
 
 ```{r prelimplots2}
 
@@ -333,7 +354,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = C_WtTau, y = qpOxbo, colour = Ex_WL)) +
+  geom_point(aes(x = C_TauAv, y = qpOxbo, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
@@ -347,7 +368,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo, colour = Ex_WL)) +
+  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +

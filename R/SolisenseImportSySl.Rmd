@@ -67,6 +67,7 @@ A2_m2 <- 1E20
 ```{r load libraries}
 library(tidyverse)
 library(lubridate)
+library(photobiologyWavebands) #R colours from nm values
 
 #https://googlesheets4.tidyverse.org/
 # library(googledrive)
@@ -89,8 +90,11 @@ ActPARCrossCal <- ActPARCrossCal |>
 ```
 
 ```{r set colours}
+# Wavelengths_nm = c(445, 470, 505, 535, 590)
+# Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
+
 Wavelengths_nm = c(445, 470, 505, 535, 590)
-Colours_nm = c("darkblue", "dodgerblue", "darkgreen", "yellowgreen",  "darkorange")
+Colours_nm = c(w_length2rgb(445), w_length2rgb(470), w_length2rgb(505),  w_length2rgb(535), w_length2rgb(590))
 
 
 names(Colours_nm) <- Wavelengths_nm
@@ -116,10 +120,11 @@ unique(duplicated(SolisenseFiles))
 # }
 
 #a read function using tidyverse::read_delim that skips a fixed number of header rows, and adds columns to the dataframe containing the filename and the file creation date time.
-read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
-    mutate(Filename = flnm)
-  }
 
+read_delim_plus <- function(flnm, delimiter, headerrows, fileencode){read_delim(flnm, delim = delimiter,  col_names = TRUE,  skip = headerrows, escape_double = FALSE,  locale = locale(encoding = fileencode), trim_ws = TRUE) %>%
+    mutate(Filename = flnm,
+           Cdatetime = ymd_hms(file.info(flnm)$ctime))
+  }
 
 ```
 
@@ -225,7 +230,8 @@ SolFitsTrim <- SolFitsTrim %>%
   mutate(LR_s = as.numeric(ObsDateTime - ObsDateTime[1]), .after = Step_s) %>%
   mutate(Dark1s = if_else(Step_s > 5, 0, 1), .after = Step_s) %>%
   relocate(Ex_WL, .after = Dark1s) %>%
-  relocate(ActPAR, .after = Ex_WL)
+  relocate(ActPAR, .after = Ex_WL) %>%
+  ungroup()
 #Figure out how to cope with final step at 0 PAR, not followed by Dark1s step
 #separate Dark1s rows
 #Figure out how to re-match Dark1s to appropriate light steps
@@ -276,37 +282,45 @@ SolFitsTrim2 <- SolFitsTrim %>%
          Fmdark = Fm[1],
          Sigdark = Sig[1],
          TauAv = ((Tau1QA * Alp1QA) + (Tau2QA * Alp2QA))/(Alp1QA + Alp2QA),
+         InvTauAv = 1/TauAv,
          aLHIIdark = (Fmdark * Fodark)/(Fmdark - Fodark),
          Fomin = min(Fo, na.rm = TRUE),
          Fmmax = max(Fm, na.rm = TRUE),
          FoOxbo = Fomin/(((Fmmax - Fomin)/Fmmax) + (Fomin/Fm)),
          Sigmax = max(Sig, na.rm = TRUE),
-         #aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
+         aLHIIminmax = (Fmmax * Fomin)/(Fmmax - Fomin),
          aLHIIOxbomax = (Fmmax * FoOxbo)/(Fmmax - FoOxbo),
+         Sigmax_m2psii = Sigmax/A2_m2,
          Sig_m2psii = Sig/A2_m2,
          ActPARCorr_photonsm2s = ActPARCorr *  photons_umol,
          #Ctau1 = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (Tau1QA/us_s))),
          #Ctau2 = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (Tau2QA/us_s))),
-         Ctauav = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (TauAv/us_s))),
-         #qp = (Fm - Fo)/(Fm - lead(Fo)), #(Fm' - Fs)/(Fm' - Fo'); messes up every 2nd row from double tap data but then filter out rows from 'dark'
+         C_TauAv = 1/(1 + (Sig_m2psii * ActPARCorr_photonsm2s * (TauAv/us_s))),
+         qp = (Fm - Fo)/(Fm - lead(Fo)), #(Fm' - Fs)/(Fm' - Fo'); messes up every 2nd row from double tap data but then filter out rows from 'dark'
          qpOxbo = (Fm - Fo)/(Fm - FoOxbo),
-         #JVPSII_aLHIIminmax = ActPARCorr_photonsm2s * aLHIIminmax * FvFm, #issue with FvFm in cyanobacteria; minimized with blue light excitation
-         #JVPSII_aLHIIdark = ActPARCorr_photonsm2s * aLHIIdark * FvFm,
+         JVPSII_aLHIIminmax = ActPARCorr_photonsm2s * aLHIIminmax * FvFm, #issue with FvFm in cyanobacteria; minimized with blue light excitation
+         JVPSII_aLHIIdark = ActPARCorr_photonsm2s * aLHIIdark * FvFm,
          JVPSII_aLHIIOxbomax = ActPARCorr_photonsm2s * aLHIIOxbomax * FvFm,
          #ETRCtau1 = Sig_m2psii * Ctau1 * ActPARCorr_photonsm2s,
          #ETRCtau2 = Sig_m2psii * Ctau2 * ActPARCorr_photonsm2s,
-         ETRCtauav = Sig_m2psii * Ctauav * ActPARCorr_photonsm2s,
-         #ETRqp = Sig_m2psii * qp * ActPARCorr_photonsm2s,
+         ETRC_TauAv = Sig_m2psii * C_TauAv * ActPARCorr_photonsm2s,
+         ETRqp = Sig_m2psii * qp * ActPARCorr_photonsm2s, # est for e PSII -1 s-1 using fract PSII from double tap
          ETRqpOxbo = Sig_m2psii * qpOxbo * ActPARCorr_photonsm2s,
          #ETRGorbo = (1/TauAv[7])*((ActPARCorr*FvFm)/(ActPARCorr[7]*FvFm[7])) * us_s,
          TestTauAvSat = 1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)],
          # ETRGorbo = (1/TauAv[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])*((ActPARCorr_photonsm2s*FvFm)/(max(ActPARCorr_photonsm2s))*(FvFm[ActPARCorr_photonsm2s == max(ActPARCorr_photonsm2s)])) * us_s,
                                                                                     #Pmax x scaling for change in yield and light
 #relies upon phiPSII which is not absolute in cyanos
-         JVPSII_ETRtauav_FoSig = ETRCtauav * Fomin/Sigmax, #Sigmax not converted A2_m2
-         JVPSII_ETRqpOxbo_FoSig = ETRqpOxbo * Fomin/Sigmax,
-         JVPSII_ETRtauav_aLHII_Sig = ETRCtauav * aLHIIOxbomax/Sigmax,
-         JVPSII_ETRqpOxbo_aLHII_Sig = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
+         JVPSII_ETRC_TauAv_FoSigmax_m2psii = ETRC_TauAv * Fomin/Sigmax_m2psii, 
+         JVPSII_ETRC_TauAv_FoSigmax_A2psii = ETRC_TauAv * Fomin/Sigmax, #Sigmax as A2
+         JVPSII_ETRqp_FoSigmax_m2psii = ETRqp * Fomin/Sigmax_m2psii, # Sigmax as m2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqp_FoSigmax_A2psii = ETRqp * Fomin/Sigmax, # Sigmax as A2, est uncalibrated e L-1 s-1
+         JVPSII_ETRqpOxbo_FoSigmax_m2psii = ETRqpOxbo * Fomin/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_FoSigmax_A2psii = ETRqpOxbo * Fomin/Sigmax, #Sigmax as A2
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRC_TauAv_aLHIIOxboSigmax_A2psii = ETRC_TauAv * aLHIIOxbomax/Sigmax,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax_m2psii,
+         JVPSII_ETRqpOxbo_aLHIIOxboSigmax_A2psii = ETRqpOxbo * aLHIIOxbomax/Sigmax) %>%
   ungroup()
        
  head(SolFitsTrim2)
@@ -337,7 +351,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = Ctauav, y = qpOxbo, colour = Ex_WL)) +
+  geom_point(aes(x = C_TauAv, y = qpOxbo, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
@@ -349,7 +363,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRtauav_FoSig, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorr, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   theme_bw()
@@ -358,7 +372,7 @@ SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = 
-         JVPSII_ETRqpOxbo_FoSig, y = JVPSII_ETRtauav_aLHII_Sig, colour = Ex_WL)) +
+         JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
@@ -370,7 +384,7 @@ SolFitsTrim2 %>%
 SolFitsTrim2 %>%
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x =  JVPSII_ETRqpOxbo_FoSig, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +

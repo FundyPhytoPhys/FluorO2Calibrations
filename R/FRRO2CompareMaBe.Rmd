@@ -353,10 +353,10 @@ O2FRRfMeta %>%
 
 O2FRRfMeta %>%
   filter(O2evln_O2ls > 0) %>%
-  filter(JVPSII_ETRqpOxbo_FoSig > 0) %>%
+  filter(JVPSII_ETRqpOxbo_FoSigmax_m2psii > 0) %>%
   ggplot() +
-  geom_point(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_FoSig, colour = Ex_WL)) +
-  geom_smooth(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_FoSig, colour = Ex_WL), method = "lm") +
+  geom_point(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL)) +
+  geom_smooth(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(TempCont), rows = vars(strain)) +
   theme_bw()
@@ -373,10 +373,10 @@ O2FRRfMeta %>%
 
 O2FRRfMeta %>%
   filter(O2evln_O2ls > 0) %>%
-  filter(JVPSII_ETRqpOxbo_aLHII_Sig > 0) %>%
+  filter(JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii > 0) %>%
   ggplot() +
-  geom_point(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_aLHII_Sig, colour = Ex_WL)) +
-  geom_smooth(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_aLHII_Sig, colour = Ex_WL), method = "lm") +
+  geom_point(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
+  geom_smooth(aes(y = O2evln_O2ls, x = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(TempCont), rows = vars(strain)) +
   theme_bw()
@@ -396,11 +396,11 @@ O2FRRfMetaNest <-  O2FRRfMeta %>%
   JVPSII_aLHIIOxbomax_O2_predict = map(JVPSII_aLHIIOxbomax_O2, possibly(augment, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_tidied =  map(JVPSII_aLHIIOxbomax_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_aLHIIOxbomax_O2_param = map(JVPSII_aLHIIOxbomax_O2, possibly(glance, otherwise = NULL)),
-  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_FoSig , data = .x), otherwise = NULL)),
+  JVPSII_ETRqpOxbo_FoSig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_FoSigmax_m2psii , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_predict = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_tidied =  map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSig_O2_param = map(JVPSII_ETRqpOxbo_FoSig_O2, possibly(glance, otherwise = NULL)),
-    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_aLHII_Sig , data = .x), otherwise = NULL)),
+    JVPSII_ETRqpOxbo_aLHII_Sig_O2 = map(data, possibly(~lm(4 * O2evln_O2ls ~ 0 + JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii , data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(augment, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied =  map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_aLHII_Sig_param = map(JVPSII_ETRqpOxbo_aLHII_Sig_O2, possibly(glance, otherwise = NULL))
@@ -420,9 +420,9 @@ O2FRRfMetaNest %>%
 O2FRRfMetaNest %>%
   unnest(JVPSII_ETRqpOxbo_FoSig_O2_predict) %>%
   ggplot() +
-  geom_line(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .fitted), colour = "black", linetype = "dashed") +
-  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = `4 * O2evln_O2ls`)) +
-  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSig, y = .resid), colour = "darkred", size = 0.1) +
+  geom_line(aes(x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = .fitted), colour = "black", linetype = "dashed") +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = `4 * O2evln_O2ls`)) +
+  geom_point(aes(x = JVPSII_ETRqpOxbo_FoSigmax_m2psii, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
   facet_grid(cols = vars(Ex_WL), rows = vars(TempCont)) +
   theme_bw()

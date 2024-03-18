@@ -145,7 +145,7 @@ O2FRRfMeta %>%
 
 O2FRRfMeta %>%
   ggplot() +
-  geom_point(aes(x = ActPARCorr, y = ETRCtauav, colour = Ex_WL)) +
+  geom_point(aes(x = ActPARCorr, y = ETRC_TauAv, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   theme_bw()
