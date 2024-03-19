@@ -295,7 +295,7 @@ O2SlopeDataClean <- O2SlopeDataClean %>%
 ```
 
 Check whether ActPARCorrinter worked properly
-```{r O2FRRfprelimplot2}
+```{r O2FRRfprelimplot2, warning = false}
 O2SlopeDataClean %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
