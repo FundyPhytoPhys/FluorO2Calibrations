@@ -615,7 +615,7 @@ All of SySl data then lost; not applicable in this case
 
 # Fit regressions of FRRf estimators vs. O2evln_O2lsMIN
 Some models fail if intercept forced = 0
-```{r FRRFO2regressions}
+```{r JVPSII_e regressions}
 
 O2FRRfMetaModels <-  O2FRRfMeta %>%
   mutate(e_Ls = 4 * O2evln_O2ls) |>
@@ -630,7 +630,7 @@ O2FRRfMetaModels <-  O2FRRfMeta %>%
 O2FRRfMetaModels
 ```
 
-```{r etrO2 regressions}
+```{r JVPSII_e regressions}
 
 O2FRRfMetaModels %>%
   unnest(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict) %>%
@@ -648,7 +648,7 @@ O2FRRfMetaModels %>%
 
 ```{r model terms}
 
-JVPSII_O2_ModelTerms <- O2FRRfMetaModels %>%
+JVPSII_eLs_ModelTerms <- O2FRRfMetaModels %>%
   select(-c("data", "JVPSII_ETRqpOxbo_FoSigmax_m2psii_e", "JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_param", "JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict")) |>
   unnest(c(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_tidied), names_sep = "_") |>
   select(-contains("_statistic")) %>%
@@ -688,13 +688,12 @@ JVPSII_O2_ModelTerms <- O2FRRfMetaModels %>%
 
 saveRDS(O2FRRfMetaModels, file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaModels.Rds", sep = "_"), fsep = .Platform$file.sep))
 
-saveRDS(JVPSII_O2_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_O2_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
+saveRDS(JVPSII_O2_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_eLs_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
 
-
-#JVPSII O2 calibration to BalticPhotoperiod
-saveRDS(JVPSII_O2_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_O2_ModelTerms.Rds", fsep = .Platform$file.sep))
+#JVPSII eLs calibration to BalticPhotoperiod
+saveRDS(JVPSII_O2_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
 
 ```
 
