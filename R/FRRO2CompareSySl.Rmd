@@ -621,7 +621,7 @@ O2FRRfMetaModels <-  O2FRRfMeta %>%
   mutate(e_Ls = 4 * O2evln_O2ls) |>
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   nest(data = -c(Ex_WL)) %>%
-  mutate(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e = map(data, possibly(~lm(JVPSII_ETRqpOxbo_FoSigmax_m2psii ~  e_Ls, data = .x), otherwise = NULL)),
+  mutate(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e = map(data, possibly(~lm(JVPSII_ETRqpOxbo_FoSigmax_m2psii ~ 0 + e_Ls, data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_tidied =  map(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e, possibly(tidy, otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_param = map(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e, possibly(glance, otherwise = NULL)),
    JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict =  map(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e, possibly(augment, otherwise = NULL))
@@ -656,29 +656,10 @@ JVPSII_eLs_ModelTerms <- O2FRRfMetaModels %>%
    separate(col = ModelTerms, into = c("Model", "Outputs"), sep = "_tidied_") |>
   pivot_wider(values_from = "value",  names_from = "Outputs") |>
   pivot_wider(names_from = "JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_tidied_term", values_from = c("estimate", "std.error", "p.value")) |>
-  rename(Intercept = `estimate_(Intercept)`,
-          Slope = `estimate_e_Ls`,
-         Intercept_SE = `std.error_(Intercept)`,
+  rename(Slope = `estimate_e_Ls`,
          Slope_SE = `std.error_e_Ls`,
-         Intercept_P = `p.value_(Intercept)`,
          Slope_P = `p.value_e_Ls`)
 
-
-  
-#   
-# JVPSII_O2_ModelParam <- O2FRRfMetaNest %>%
-#   unnest(c( JVPSII_aLHIIOxbomax_O2_param, JVPSII_ETRtauav_FoSig_O2_param, JVPSII_ETRqpOxbo_FoSig_O2_param, JVPSII_ETRtauav_aLHII_Sig_O2_param, JVPSII_ETRqpOxbo_aLHII_Sig_O2_param), names_sep = "_") %>%
-#   select(-c("data", "JVPSII_ETRtauav_aLHII_Sig_O2",  "JVPSII_aLHIIOxbomax_O2", "JVPSII_aLHIIOxbomax_O2_tidied","JVPSII_aLHIIOxbomax_O2_predict","JVPSII_ETRtauav_FoSig_O2", "JVPSII_ETRtauav_FoSig_O2_tidied",        "JVPSII_ETRtauav_FoSig_O2_predict","JVPSII_ETRqpOxbo_FoSig_O2", "JVPSII_ETRqpOxbo_FoSig_O2_tidied","JVPSII_ETRqpOxbo_FoSig_O2_predict","JVPSII_ETRtauav_aLHII_Sig_O2_tidied","JVPSII_ETRtauav_aLHII_Sig_O2_predict",  "JVPSII_ETRqpOxbo_aLHII_Sig_O2","JVPSII_ETRqpOxbo_aLHII_Sig_O2_tidied","JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict")) %>%
-#   select(-contains(c("_statistic", "_logLik", "_BIC", "nobs", "deviance", "df.residual", "df", "sigma", "p.value"))) %>%
-#   pivot_longer(cols = contains(c("r.squared", "adj.r.squared", "AIC")), names_to = "ModelParam") %>%
-#     separate(col = ModelParam, into = c("Model", "Param"), sep = "_O2_param_") %>%
-#      pivot_wider(names_from = "Param", values_from = "value")
-# 
-# JVPSII_O2_ModelTermsParam <- left_join(JVPSII_O2_ModelTerms, JVPSII_O2_ModelParam, by = c("Ex_WL", "Model")) |>
-#   mutate(SESlope = Slope_std.error/Slope_estimate, .before = Slope_p.value)
-# 
-# JVPSII_O2_ModelTermsParam
-#   
 
 ```
 
@@ -688,12 +669,12 @@ JVPSII_eLs_ModelTerms <- O2FRRfMetaModels %>%
 
 saveRDS(O2FRRfMetaModels, file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaModels.Rds", sep = "_"), fsep = .Platform$file.sep))
 
-saveRDS(JVPSII_O2_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_eLs_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
+saveRDS(JVPSII_eLs_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_eLs_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 #JVPSII eLs calibration to BalticPhotoperiod
-saveRDS(JVPSII_O2_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
+saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
 
 ```
 
