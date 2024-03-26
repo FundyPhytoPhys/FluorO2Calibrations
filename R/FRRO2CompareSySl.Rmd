@@ -676,6 +676,9 @@ saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(
 #JVPSII eLs calibration to BalticPhotoperiod
 saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
 
+#JVPSII eLs calibration to PicoDiel
+saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "PicoDiel", "Data", "CleanedData", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
+
 ```
 
 
