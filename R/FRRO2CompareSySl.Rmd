@@ -97,7 +97,7 @@ Improve this if we generalize the approach.
 
 
 This chunk reads in a MetaData catalog from googlesheets
-Optode Data already merged with MetaData but workflow needs a re-merger.
+Optode Data already merged with MetaData but workflow might need a re-merger.
 ```{r load Catalog, now as a google sheet}
 gs4_deauth()
 
@@ -295,6 +295,9 @@ O2SlopeDataClean <- O2SlopeDataClean %>%
 ```
 
 Check whether ActPARCorrinter worked properly
+New Problem with Interpolate generating series of 0 values for ActPARCorrinter
+Need to fix; has arisen since last run
+
 ```{r O2FRRfprelimplot2, warning = false}
 O2SlopeDataClean %>%
   ggplot() +
@@ -454,7 +457,7 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Strain)) +
   theme_bw()
@@ -464,29 +467,18 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = ETRC_TauAv, colour = Ex_WL, shape = Strain)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = ETRC_TauAv, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = ETRC_TauAv, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = ETRC_TauAv, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   theme_bw()
 
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = ETRqpOxbo, colour = Ex_WL, shape = Strain)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = ETRqpOxbo, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = ETRqpOxbo, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  theme_bw()
-
-O2FRRfMeta %>%
-  filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
-  ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL)) +
-  scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = ETRqpOxbo, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -495,9 +487,9 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -506,9 +498,9 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -517,9 +509,20 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2ls, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  #facet_grid(cols = vars(Strain)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_bw()
+
+O2FRRfMeta %>%
+  filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
+  ggplot() +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -534,11 +537,11 @@ Graphical Test for stability of [PSII] estimates.
 ```{r PSIIstabilitytestplot}
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
-  filter(Ex_WL == 470) |>
+  filter(Ex_WL == 445) |>
   ggplot() +
-  geom_point(aes(y  = (O2evln_O2ls * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
+  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = ActPARCorr, y = (O2evln_O2ls * 4)/ETRqpOxbo, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = ActPARCorr, y = (O2evln_O2lsMIN * 4)/ETRqpOxbo, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme_bw()
@@ -548,9 +551,9 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   ggplot() +
-  geom_point(aes(y  = (O2evln_O2ls * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
+  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = ActPARCorr, y =(O2evln_O2ls * 4)/ETRC_TauAv, colour = Ex_WL), method = "lm") +
+  geom_smooth(aes(x = ActPARCorr, y =(O2evln_O2lsMIN * 4)/ETRC_TauAv, colour = Ex_WL), method = "lm") +
   #facet_grid(cols = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme_bw()
@@ -613,12 +616,12 @@ All of SySl data then lost; not applicable in this case
 ```
 
 
-# Fit regressions of FRRf estimators vs. O2evln_O2lsMIN
+# Fit regressions of FRRf estimators of JVPSII vs. O2evln_O2lsMIN multiply by 4X to convert to e_Ls
 Some models fail if intercept forced = 0
 ```{r JVPSII_e regressions}
 
 O2FRRfMetaModels <-  O2FRRfMeta %>%
-  mutate(e_Ls = 4 * O2evln_O2ls) |>
+  mutate(e_Ls = 4 * O2evln_O2lsMIN) |>
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
   nest(data = -c(Ex_WL)) %>%
   mutate(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e = map(data, possibly(~lm(JVPSII_ETRqpOxbo_FoSigmax_m2psii ~ 0 + e_Ls, data = .x), otherwise = NULL)),
@@ -634,6 +637,19 @@ O2FRRfMetaModels
 
 O2FRRfMetaModels %>%
   unnest(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict) %>%
+  ggplot() +
+  geom_line(aes(x = e_Ls, y = .fitted), colour = "black", linetype = "dashed") +
+ #geom_line(aes(x = O2evln_O2ls, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
+ #geom_line(aes(x = O2evln_O2ls, y = .fitted - .se.fit), colour = "grey", linetype = "dashed") +
+  geom_point(aes(x = e_Ls, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii),colour = "darkgreen") +
+  geom_point(aes(x = e_Ls, y = .resid), colour = "darkred", size = 0.1) +
+  geom_hline(yintercept = 0,linetype = "dashed") +
+  facet_grid(cols = vars(Ex_WL)) +
+  theme_bw()
+
+O2FRRfMetaModels %>%
+  unnest(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict) %>%
+  filter(Ex_WL == 445) |>
   ggplot() +
   geom_line(aes(x = e_Ls, y = .fitted), colour = "black", linetype = "dashed") +
  #geom_line(aes(x = O2evln_O2ls, y = .fitted + .se.fit), colour = "grey", linetype = "dashed") +
