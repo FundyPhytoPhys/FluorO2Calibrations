@@ -274,14 +274,16 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorr), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
-  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
-  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  #scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  #scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
 ```
 
 Interpolate ActPARCorr estimates across entire time axis.
 Problem if LR_s used for join? lose separate LR_sFRRf previously used for interpolations.
+
+Issues with interpolation of ActPAR across Ex_WL and/or ObsDate and/or other boundaries
 ```{r interpolate FRRf estimates}
 #http://publish.illinois.edu/spencer-guerrero/2014/12/11/2-dealing-with-missing-data-in-r-omit-approx-or-spline-part-1/
 #https://dplyr.tidyverse.org/dev/articles/colwise.html
@@ -289,17 +291,21 @@ Problem if LR_s used for join? lose separate LR_sFRRf previously used for interp
 
 interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = FALSE, type = "l", maxgap = Inf)}
 
-O2SlopeDataClean <- O2SlopeDataClean %>%
-  mutate(ActPARCorrinter = interpolate(ActPARCorr))
+O2SlopeDataClean2 <- O2SlopeDataClean %>%
+  group_by(c(FilenameO2, Ex_WL)) |>
+  mutate(ActPARCorrinter = interpolate(ActPARCorr)) |>
+  ungroup()
  
 ```
 
 Check whether ActPARCorrinter worked properly
 New Problem with Interpolate generating series of 0 values for ActPARCorrinter
 Need to fix; has arisen since last run
+Groups that have excess 0 ActPARInter are runs with 2 ObsDates of the same CultureID.
+Including a 'group_by' does not fix problem.
 
 ```{r O2FRRfprelimplot2, warning = false}
-O2SlopeDataClean %>%
+O2SlopeDataClean2 %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black", size = 0.1) +
