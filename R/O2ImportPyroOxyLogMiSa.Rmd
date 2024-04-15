@@ -47,12 +47,12 @@ knitr::opts_chunk$set(fig.path='Figs/')
 
 ```{r set project variables for bulk import}
 #"..", takes up a level in the directory path
-Project <- "PICO"
+Project <- "FluorO2"
 
-Run <- "MiSa"
+Run <- "MiSaProchloro"
 
 FileID <- "caloxy"
-DataIn <- file.path("..", "RawData", Run, "Optode")
+DataIn <- file.path("..", "RawData", "MiSa", "Optode")
 DataOut <- file.path("..","ImportData", "Optode")
 #MetaCatalog <- file.path("..","PicoCatalog.csv")
 
