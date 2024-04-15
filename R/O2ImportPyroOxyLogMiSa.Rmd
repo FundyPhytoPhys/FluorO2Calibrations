@@ -114,7 +114,7 @@ MetaData for each culture was entered manually; including a serial SampleID (ex.
 
 This chunk reads in MetaData stored locally as .csv, for MURIS MABE project
 ```{r read local MetaData}
-MetaData <- read_csv(MetaDataPath)
+# MetaData <- read_csv(MetaDataPath)
 ```
 
 Listing the names of the oxygen data, path stored in variable DataIn.
