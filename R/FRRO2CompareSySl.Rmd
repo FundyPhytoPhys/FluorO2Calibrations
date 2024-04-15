@@ -302,7 +302,7 @@ Need to fix; has arisen since last run
 O2SlopeDataClean %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
-  geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black") +
+  geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black", size = 0.1) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
@@ -370,7 +370,7 @@ O2Slopes %>%
   geom_point(aes(x = ActPARCorrinter, y = O2evln_O2ls, colour = Ex_WL)) +
   #geom_line(aes(x = ActPARCorrinter, y = O2evln_O2ls_OLD, colour = "black")) +
     scale_colour_manual(values = Colours_nm) +
-facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
