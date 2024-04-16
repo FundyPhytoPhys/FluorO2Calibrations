@@ -159,13 +159,15 @@ O2Data2 <- O2Data %>%
   rename(AbsTime = `Time (HH:MM:SS)`,
          LR_s = `Time (s)`,
          O2_umolL = `Ch1...5`, 
-         Temp_C = `Ch 1...9`)
+         Temp_C = `Ch 1...9`,
+         ObsDate = `Date`)
 
 O2Data2 <- O2Data2 %>%
   mutate(Filename = str_remove(string = Filename, pattern = ".txt")) %>%
+  mutate(Filename = str_remove(string = Filename, pattern = "_LL")) %>% 
   mutate(Filename = str_remove(string = Filename, pattern = "../RawData/SySl/Optode/")) %>%  
   mutate(Filename = str_remove(string = Filename, pattern = "_caloxy")) %>% 
-  separate(Filename, into = c("Run", "YYYYMMDDHHMM", "Project", "CultureID", "Ex_WL", "GrowthLight"), sep = "([\\/\\_\\_\\_\\_\\_])", remove = FALSE) %>%
+  separate(Filename, into = c("Run", "YYYYMMDDHHMM", "Project", "CultureID", "Ex_WL"), sep = "([\\/\\_\\_\\_\\_\\_])", remove = FALSE) %>%
   mutate(YYYYMMDDHHMM = parse_date_time(as.character(YYYYMMDDHHMM), "ymd_HM"))
 
 O2Data2[1:5,]

@@ -107,7 +107,7 @@ MetaData <- read_sheet(CatalogURL) %>%
  as.data.frame(MetaData)
 
 MetaData <- MetaData %>%
-  select(-c("Motivation", "Plate", "Well", "InocpH", "FinalpH", "Par_ueAdjusted", "DateOfAdjustment", "ElaspedHoursAtAdjustment" , "ExpEndDate", "...44",  "...45")) %>%
+  select(-c("Motivation", "Plate", "Well", "InocpH", "FinalpH", "Par_ueAdjusted", "DateOfAdjustment", "ElaspedHoursAtAdjustment" , "ExpEndDate")) %>%
   rename(Calc_umolphotonsm2s1 = `Calculated_µmolPhotons_m-2d-1`)
 
 # sheet is read in by sheet ID, obtained from the URL of the sheet.
@@ -170,7 +170,8 @@ Remove missing rows, reconcile time formats
 O2Data <- O2Data %>%
   filter(!is.na(LR_s)) %>%
   filter(TempCont == Cuvette) %>%
-  filter(LR_s <= 1600)
+  filter(LR_s <= 1600) %>% 
+  mutate(LR_s = as.numeric(round(LR_s, digits = 0)))
 
 #%>%
   #filter(CultureID == StrainID) %>%
@@ -186,7 +187,7 @@ O2Data %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(CultureID), cols = vars(Ex_WL)) +
+  facet_grid(rows = vars(CultureID, FileDateTime), cols = vars(Ex_WL)) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
@@ -261,8 +262,8 @@ O2SlopeData %>%
   geom_point(aes(x = LR_s, y = ActPARCorr), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(FileDateTime), cols = vars(CultureID)) +
-  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
-  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
+  # scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  # scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 4, angle=0))
 
 ```
@@ -285,8 +286,8 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = ActPARCorr), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(cols = vars(CultureID), rows = vars(FileDateTime)) +
-  # scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
-  # scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
+   # scale_x_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+   # scale_y_continuous(sec.axis = sec_axis(~ . , name = "Exp date and time", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
 ```
 
@@ -311,7 +312,7 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID, FileDateTime)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
@@ -434,7 +435,7 @@ O2FRRf <- O2Slopes %>%
   select(-c("Light_1",  "Light_2", "Light_3", "Light_4",  "Light_5", "Light_6", "nm445Corr", "nm470Corr", "nm505Corr", "nm535Corr", "nm590Corr", "IRCorr" ))
 
 
-O2FRRfMeta <- left_join(x = O2FRRf, y = MetaData, by = c("CultureID" = "ID")) 
+O2FRRfMeta <- left_join(x = O2FRRf, y = MetaData, by = c("CultureID" = "SampleID")) 
 
 ```
 
@@ -631,7 +632,7 @@ O2FRRfMetaNest %>%
   geom_point(aes(x = O2evln_O2ls, y =  JVPSII_ETRqpOxbo),colour = "darkgreen") +
   geom_point(aes(x = O2evln_O2ls, y = .resid), colour = "darkred", size = 0.1) +
   geom_hline(yintercept = 0,linetype = "dashed") +
-  facet_grid(cols = vars(Ex_WL)) +
+ # facet_grid(cols = vars(Ex_WL)) +
   theme_bw()
 
 
@@ -647,6 +648,7 @@ JVPSII_O2_ModelTerms <- O2FRRfMetaNest %>%
 
 
 %>%
+  
  # select(-c("data", "JVPSII_ETRtauav_aLHII_Sig_O2",  "JVPSII_aLHIIOxbomax_O2", "JVPSII_aLHIIOxbomax_O2_param","JVPSII_aLHIIOxbomax_O2_predict","JVPSII_ETRtauav_FoSig_O2", "JVPSII_ETRtauav_FoSig_O2_param",        "JVPSII_ETRtauav_FoSig_O2_predict","JVPSII_ETRqpOxbo_FoSig_O2", "JVPSII_ETRqpOxbo_FoSig_O2_param","JVPSII_ETRqpOxbo_FoSig_O2_predict","JVPSII_ETRtauav_aLHII_Sig_O2_param","JVPSII_ETRtauav_aLHII_Sig_O2_predict",  "JVPSII_ETRqpOxbo_aLHII_Sig_O2","JVPSII_ETRqpOxbo_aLHII_Sig_O2_param","JVPSII_ETRqpOxbo_aLHII_Sig_O2_predict")) %>%
   select(-contains("_statistic")) %>%
   pivot_longer(cols = contains(c("estimate", "std.error", "p.value")), names_to = "ModelTerms")
