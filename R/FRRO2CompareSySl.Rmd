@@ -157,9 +157,7 @@ Make this more general as we accumulate more files.
 ```{r read data}
 #temporary hack to cope with run date; replace with GREP? or map?
 O2Data <- readRDS(file = file.path(DataInO2, paste("FluorO2_", Run, "_O2Data.Rds", sep = ""))) %>%
-  mutate(TempCont = Cuvette) %>% 
-# %>% #add TempCont column for compatibility
-  rename(ObsDate = Date) #rename variable for compatibility
+  mutate(TempCont = Cuvette)  #add TempCont column for compatibility
 
 
 head(O2Data)
@@ -399,7 +397,7 @@ facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
 Filter runs with positive initial dark slope?
 ```{r remove positive dark slopes}
 # # O2SlopesClean <- O2Slopes %>%
-# #   group_by(Date, FilenameO2, Run, ObsDate, CultureID, Ex_WL, GrowthLight, TempCont) %>%
+# #   group_by(Date, FilenameO2, Run, ObsDate, CultureID, Ex_WL,  TempCont) %>%
 # #     filter(any(O2_umolLs[ActPARCorrinter == 0] > 0)) %>%
 # #   ungroup()
 # 
@@ -701,6 +699,9 @@ saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(
 
 #JVPSII eLs calibration to BalticPhotoperiod
 saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
+
+#JVPSII eLs calibration to BalticPhotoperiod
+saveRDS(O2FRRfMetaModels, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "O2FRRfMetaModels.Rds", fsep = .Platform$file.sep))
 
 #JVPSII eLs calibration to PicoDiel
 saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "PicoDiel", "Data", "CleanedData", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
