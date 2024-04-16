@@ -58,6 +58,7 @@ DataOut <- file.path("..", "FitData")
 CatalogURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 
 Run <- "SySlBiolSteps"
+# Run <- "MiSaProchloro"
 
 ```
 
@@ -156,7 +157,8 @@ Make this more general as we accumulate more files.
 ```{r read data}
 #temporary hack to cope with run date; replace with GREP? or map?
 O2Data <- readRDS(file = file.path(DataInO2, paste("FluorO2_", Run, "_O2Data.Rds", sep = ""))) %>%
-  mutate(TempCont = Cuvette) %>% #add TempCont column for compatibility
+  mutate(TempCont = Cuvette) %>% 
+# %>% #add TempCont column for compatibility
   rename(ObsDate = Date) #rename variable for compatibility
 
 
@@ -169,7 +171,9 @@ Remove missing rows, reconcile time formats
 O2Data <- O2Data %>%
   filter(!is.na(LR_s)) %>%
   filter(TempCont == Cuvette) %>%
-  filter(LR_s <= 1600)
+  filter(LR_s <= 1600) %>% 
+  mutate(LR_s = as.numeric(round(LR_s, digits = 0)))
+
 
 #%>%
   #filter(CultureID == StrainID) %>%
@@ -235,7 +239,7 @@ colnames(O2Data)
 
 colnames(FRRfDataLight)
 
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL", "GrowthLight","LR_s", "TempCont", "Project"), suffix = c("O2", "FRRf"), keep = FALSE)
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL","LR_s", "TempCont", "Project"), suffix = c("O2", "FRRf"), keep = FALSE)
 
 head(O2SlopeData)
 ```
@@ -244,7 +248,7 @@ head(O2SlopeData)
 colnames(O2SlopeData)
 
 O2SlopeData <- O2SlopeData %>%
-  select(-c("PIF","LEDSel", "Tau1PQ","Alp2PQ","Tau2PQ","Alp3PQ", "TPQ_PSI", "nm445", "nm470","nm505","nm535","nm590","IR"))
+  select(-c("LEDSel", "Tau1PQ","Alp2PQ","Tau2PQ","Alp3PQ", "TPQ_PSI", "nm445", "nm470","nm505","nm535","nm590","IR"))
 ```
 
 
@@ -291,8 +295,8 @@ Issues with interpolation of ActPAR across Ex_WL and/or ObsDate and/or other bou
 
 interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = FALSE, type = "l", maxgap = Inf)}
 
-O2SlopeDataClean2 <- O2SlopeDataClean %>%
-  group_by(c(FilenameO2, Ex_WL)) |>
+O2SlopeDataClean <- O2SlopeDataClean %>%
+  # group_by(c(FilenameO2)) |>
   mutate(ActPARCorrinter = interpolate(ActPARCorr)) |>
   ungroup()
  
@@ -305,7 +309,7 @@ Groups that have excess 0 ActPARInter are runs with 2 ObsDates of the same Cultu
 Including a 'group_by' does not fix problem.
 
 ```{r O2FRRfprelimplot2, warning = false}
-O2SlopeDataClean2 %>%
+O2SlopeDataClean %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black", size = 0.1) +
@@ -328,7 +332,7 @@ end_s = 170
 
 O2Slopes <- O2SlopeDataClean %>%
   filter(!is.na(ActPARCorrinter)) %>%
-    nest(O2data = -c(FilenameO2, ActPARCorrinter, CultureID, ObsDate, Ex_WL, GrowthLight, TempCont, Project, Run))
+    nest(O2data = -c(FilenameO2, ActPARCorrinter, CultureID, ObsDate, Ex_WL, TempCont, Project))
 
 #head(O2Slopes)
 
@@ -345,7 +349,7 @@ O2Slopes <- O2Slopes %>%
   select(-term) %>%
   rename(O2_umolLs = estimate) %>%
   select(-c(statistic, p.value)) %>%
-  group_by(FilenameO2, Run, Project, ObsDate, CultureID,  Ex_WL, GrowthLight, TempCont) %>% 
+  group_by(FilenameO2, Project, ObsDate, CultureID,  Ex_WL, TempCont) %>% 
   mutate(O2evln_O2ls = ((O2_umolLs - first(O2_umolLs)) * photons_umol)) %>%
   mutate(O2evln_O2lsMIN = ((O2_umolLs - min(O2_umolLs)) * photons_umol)) %>%
   # nest() %>%
