@@ -294,7 +294,6 @@ Issues with interpolation of ActPAR across Ex_WL and/or ObsDate and/or other bou
 interpolate <- function(x){zoo::na.locf(x, na.rm = FALSE, fromLast = FALSE, type = "l", maxgap = Inf)}
 
 O2SlopeDataClean <- O2SlopeDataClean %>%
-  # group_by(c(FilenameO2)) |>
   mutate(ActPARCorrinter = interpolate(ActPARCorr)) |>
   ungroup()
  
@@ -305,6 +304,8 @@ New Problem with Interpolate generating series of 0 values for ActPARCorrinter
 Need to fix; has arisen since last run
 Groups that have excess 0 ActPARInter are runs with 2 ObsDates of the same CultureID.
 Including a 'group_by' does not fix problem.
+
+Problem fixed by rounding LR_s to 0 digits, allows full join of 'FRRfDataLight' with 'O2Data'.
 
 ```{r O2FRRfprelimplot2, warning = false}
 O2SlopeDataClean %>%
