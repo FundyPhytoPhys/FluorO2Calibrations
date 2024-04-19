@@ -187,6 +187,16 @@ SolFitsTrim <- SolFitsTrim %>%
 head(SolFitsTrim)
 ```
 
+# Remove cultures that were not grown in multicultivator
+```{r}
+SolFitsTrim <- SolFitsTrim %>%
+  mutate(TempCont = "TC") %>% 
+  filter(CultureID != "MiSa1444",
+         CultureID != "MiSa1445",
+         CultureID != "JuNa1024")
+
+```
+
 
 ```{r actparcorr}
 #Add ActPARcorr with proper correction factors for TC and no TC
@@ -377,6 +387,17 @@ SolFitsTrim2 %>%
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
 
+SolFitsTrim2 %>%
+  filter(Dark1s == 0) %>%
+  ggplot() +
+  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = Ex_WL)) +
+  scale_colour_manual(values = Colours_nm) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
+  #coord_fixed(ratio = 1) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, ObsDate)) +
+  theme(strip.text.y = element_text(size = 5, angle=0)) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
 
 ```
 
