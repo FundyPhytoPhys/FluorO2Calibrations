@@ -269,8 +269,7 @@ O2SlopeDataClean <- O2SlopeData %>%
   #filter(LR_s <= 800) %>%
   filter(!(Ex_WL == 445 & CultureID %in% c("SySl1247")),
          #!(Ex_WL == 470 & CultureID %in% c("SySl1187")),
-         !(Ex_WL == 590 & CultureID %in% c("SySl1227")),
-         !(CultureID %in% c("JuNa1024", "MiSa1444", "MiSa1445")))
+         !(Ex_WL == 590 & CultureID %in% c("SySl1227")))
 
 O2SlopeDataClean %>%
   ggplot() +
@@ -314,7 +313,7 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black", size = 0.1) +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID, FileDateTime)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
@@ -546,7 +545,7 @@ For e- PSII-1 s-1 estimators like ETRqpOxbo, a plot vs. O2 evln_O2ls should give
 Graphical Test for stability of [PSII] estimates.
 ```{r PSIIstabilitytestplot}
 O2FRRfMeta %>%
-  filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
+  filter(ActPARCorrinter > 0 & ActPARCorrinter < 350) %>% # was < 200 
   filter(Ex_WL == 445) |>
   ggplot() +
   geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
@@ -559,7 +558,7 @@ O2FRRfMeta %>%
 
 
 O2FRRfMeta %>%
-  filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
+  filter(ActPARCorrinter > 0 & ActPARCorrinter < 350) %>% # was < 200 
   ggplot() +
   geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
@@ -697,16 +696,17 @@ saveRDS(O2FRRfMetaModels, file.path(DataOut, paste(Project, Run, Cuvette, "O2FRR
 
 saveRDS(JVPSII_eLs_ModelTerms, file.path(DataOut, paste(Project, Run, Cuvette, "JVPSII_eLs_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
 
-saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
+# to BalticPhotoperiod
+# saveRDS(O2FRRfMeta |> filter(CultureID == "SySl1231" & Ex_WL == 535), file.path(DataOut, paste(Project, Run, Cuvette, "O2FRRfMetaFigureData.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 #JVPSII eLs calibration to BalticPhotoperiod
-saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
+# saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
 
 #JVPSII eLs calibration to BalticPhotoperiod
-saveRDS(O2FRRfMetaModels, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "O2FRRfMetaModels.Rds", fsep = .Platform$file.sep))
+# saveRDS(O2FRRfMetaModels, file.path("..", "..", "BalticPhotoperiod", "Data", "CleanedData", "JVPSIIO2Calib", "O2FRRfMetaModels.Rds", fsep = .Platform$file.sep))
 
 #JVPSII eLs calibration to PicoDiel
-saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "PicoDiel", "Data", "CleanedData", "JVPSII_eLs_ModelTerms.Rds", fsep = .Platform$file.sep))
+saveRDS(JVPSII_eLs_ModelTerms, file.path("..", "..", "PicoDiel", "Data", "CleanedData", paste(Run, Cuvette, "JVPSII_eLs_ModelTerms.Rds", sep = "_"), fsep = .Platform$file.sep))
 
 ```
 
