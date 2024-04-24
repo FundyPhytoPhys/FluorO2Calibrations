@@ -151,7 +151,7 @@ colnames(SolFits)
 
 SolFitsTrim <- SolFits %>% 
   filter(!grepl("----", DATE)) %>% # remove rows with "----" in DATE
-  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...39`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
+  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...38`, , `...58`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
   mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/"),
          Filename = str_remove(string = Filename, pattern = "_caloxy"),
          Filename = str_remove(string = Filename, pattern = "_refit.csv")
@@ -182,19 +182,9 @@ SolFitsTrim <- SolFits %>%
 
 #for consistency add TempCont column
 SolFitsTrim <- SolFitsTrim %>%
-  mutate(TempCont = "TC")
+  mutate(TempCont = "TC")# Add a variable to designate this experiment was temperature controlled.
 
 head(SolFitsTrim)
-```
-
-# Remove cultures that were not grown in multicultivator
-```{r}
-SolFitsTrim <- SolFitsTrim %>%
-  mutate(TempCont = "TC") %>% 
-  filter(CultureID != "MiSa1444",
-         CultureID != "MiSa1445",
-         CultureID != "JuNa1024")
-
 ```
 
 
