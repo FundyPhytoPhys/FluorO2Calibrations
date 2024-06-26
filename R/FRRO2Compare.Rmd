@@ -19,7 +19,7 @@ Compare [O2] to FRRf data for a dataset.
 
 Define time windows defined by changes in PAR imposed by script from FRRf changes in PAR.
 For each run create a series of nests of [O2] data from optode for each PAR level and each TempCont setting.
-Trim [O2] data nests to remove first 35 rows (~ 35 s) of 180 rows (~ 180 s) to avoid initial induction period.
+Trim [O2] data nests to remove first 60 rows (~ 60 s) of 180 rows (~ 180 s) to avoid initial induction period.
 Fit slopes of umol O2  l~-1~ s~-1~ for each PAR level nest.
 Generate estimates of gross umol O2  l~-1~ s~-1~ by subtracting dark respiration rates.
   Initial and final O2 respiration rate estimators; average? chose?
@@ -57,8 +57,8 @@ DataOut <- file.path("..", "FitData")
 #CatalogPath <- file.path("../MURIS/MURIS_catalog.csv")
 CatalogURL <- "https://docs.google.com/spreadsheets/d/1ZXpwR7Gfto-uRzVdXzMpQF4frbrvMLH_IyLqonFZRSw/edit#gid=0"
 
-# Run <- "SySlBiolSteps"
- Run <- "MiSaProchloro"
+Run <- "SySlBiolSteps"
+# Run <- "MiSaProchloro"
 
 ```
 
@@ -199,14 +199,18 @@ Draw plot from two dataframes
 FRRfDataLight %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = FvFm)) +
-  facet_grid(rows = vars(CultureID, StartDateTimeSol), cols = vars(Ex_WL, TempCont)) +
-  scale_colour_manual(values = Colours_nm)
+  facet_grid(rows = vars(CultureID), cols = vars(Ex_WL, TempCont))
+
+# +
+#   scale_colour_manual(values = Colours_nm)
 
 O2Data %>%
   ggplot() +
   geom_point(aes(x = LR_s, y = O2_umolL)) +
-  facet_grid(rows = vars(CultureID, FileDateTime), cols = vars(Ex_WL, TempCont)) +
-  scale_colour_manual(values = Colours_nm)
+  facet_grid(rows = vars(CultureID), cols = vars(Ex_WL, TempCont))
+  
+  #+
+  # scale_colour_manual(values = Colours_nm)
 
 ```
 
@@ -237,7 +241,12 @@ colnames(O2Data)
 
 colnames(FRRfDataLight)
 
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL","LR_s", "TempCont", "Project", "FileDateTime" = "StartDateTimeSol"), suffix = c("O2", "FRRf"), keep = FALSE) # "FileDateTime" = "StartDateTimeSol" lines up data when replicates are preformed on same day, "ObsDate" does not have time.
+intersect(colnames(O2Data),colnames(FRRfDataLight))
+
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL","LR_s", "TempCont", "Project"), suffix = c("O2", "FRRf"), keep = FALSE)
+
+#, "FileDateTime" = "StartDateTimeSol"
+# "FileDateTime" = "StartDateTimeSol" lines up data when replicates are preformed on same day, "ObsDate" does not have time.
 
 head(O2SlopeData)
 ```
@@ -276,7 +285,7 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorr), colour = "black") +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, FileDateTime)) +
+  facet_grid(cols = vars(Ex_WL), rows = vars(CultureID)) +
   #scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   #scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
@@ -313,7 +322,7 @@ O2SlopeDataClean %>%
   geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
   geom_point(aes(x = LR_s, y = ActPARCorrinter), colour = "black", size = 0.1) +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID, FileDateTime)) +
+  facet_grid(rows = vars(Ex_WL), cols = vars(CultureID)) +
   scale_y_continuous(sec.axis = sec_axis(~ . , name = "CultureID", breaks = NULL, labels = NULL)) +
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) +
     theme(strip.text.y = element_text(size = 5, angle=0))
@@ -324,6 +333,7 @@ Estimate O2 slopes over LR PAR step ranges
 Be careful with nesting!  Multiple steps at single ActPARCorrinter
 Filter out first `r induction_s` s of each ActPARCorrinter set to skip 'induction' phase.
 Stop fitting at `r_end_s`
+26 June 2024 found issue with nesting and slope estimates
 
 ```{r O2slopes}
 induction_s = 60 #hack solution to only take slope of O2 well within given light level
@@ -331,7 +341,7 @@ end_s = 170
 
 O2Slopes <- O2SlopeDataClean %>%
   filter(!is.na(ActPARCorrinter)) %>%
-    nest(O2data = -c(FilenameO2, ActPARCorrinter, CultureID, ObsDate, Ex_WL, TempCont, Project))
+    nest(O2data = -c(ObsDate, FilenameO2, Project, CultureID, Ex_WL, TempCont, ActPARCorrinter))
 
 #head(O2Slopes)
 
