@@ -1,5 +1,5 @@
 ---
-title: "FRRO2Compare2"
+title: "FRRO2Compare"
 author:
 - Douglas A. Campbell
 - Maximilian Berthold
@@ -347,8 +347,8 @@ Stop fitting at `r_end_s`
 Final ActPARCorrInter == 0 is lost from slope fitting b/c it is lumped in with initial ActPARCorrInter in nest
 
 ```{r O2slopes}
-induction_s = 60 #hack solution to only take slope of O2 well within given light level
-end_s = 170
+induction_s = 40 #hack solution to only take slope of O2 well within given light level
+end_s = 175
 
 #TempCont missing?
 O2Slopes <- O2SlopeDataClean %>%
