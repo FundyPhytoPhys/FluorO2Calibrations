@@ -643,7 +643,7 @@ Some models fail if intercept forced = 0
 
 O2FRRfMetaModels <-  O2FRRfMeta %>%
   mutate(e_Ls = 4 * O2evln_O2lsMIN) |>
-  filter(ActPARCorrinter > 0 & ActPARCorrinter < 200) %>%
+  filter(ActPARCorrinter > 0 & ActPARCorrinter < 400) %>%
   nest(data = -c(Ex_WL)) %>%
   mutate(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e = map(data, possibly(~lm(JVPSII_ETRqpOxbo_FoSigmax_m2psii ~ 0 + e_Ls, data = .x), otherwise = NULL)),
   JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_tidied =  map(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e, possibly(tidy, otherwise = NULL)),
@@ -654,7 +654,7 @@ O2FRRfMetaModels <-  O2FRRfMeta %>%
 O2FRRfMetaModels
 ```
 
-```{r JVPSII_e regressions}
+```{r JVPSII_e regression plots}
 
 O2FRRfMetaModels %>%
   unnest(JVPSII_ETRqpOxbo_FoSigmax_m2psii_e_predict) %>%
