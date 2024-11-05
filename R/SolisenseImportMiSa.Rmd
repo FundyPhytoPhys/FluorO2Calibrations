@@ -151,7 +151,7 @@ colnames(SolFits)
 
 SolFitsTrim <- SolFits %>% 
   filter(!grepl("----", DATE)) %>% # remove rows with "----" in DATE
-  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...38`, , `...58`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
+  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...38`,  `...58`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
   mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/"),
          Filename = str_remove(string = Filename, pattern = "_caloxy"),
          Filename = str_remove(string = Filename, pattern = "_refit.csv")
