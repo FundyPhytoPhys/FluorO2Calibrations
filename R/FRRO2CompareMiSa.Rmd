@@ -166,6 +166,7 @@ head(O2Data)
 
 Remove missing rows, reconcile time formats
 ```{r remove missing rows}
+# Sometimes round produces 2 of the same LR_s whole number depending on if 2 consecutive LR_s round to the same digit (example: 35.5 = 36 then 36.4 = 36)
 O2Data <- O2Data %>%
   filter(!is.na(LR_s)) %>%
   filter(TempCont == Cuvette) %>%
@@ -254,7 +255,7 @@ O2Data <- subset(O2Data, row.names(O2Data) != 36014)
 FRRfDataLight <- subset(FRRfDataLight, row.names(FRRfDataLight) != 201)
 
 # if there are 2 replicates on the same day, not sure how this behaves- Mireille to check
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "FileDateTime" = "StartDateTimeSol", "Ex_WL", "LR_s"), suffix = c("O2", "FRRf"), keep = FALSE)
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "FileDateTime" = "StartDateTimeSol", "Ex_WL", "LR_s", "TempCont"), suffix = c("O2", "FRRf"), keep = FALSE)
 
 #, 
 # "FileDateTime" = "StartDateTimeSol" lines up data when replicates are preformed on same day, "ObsDate" does not have time.
@@ -335,6 +336,7 @@ Groups that have excess 0 ActPARInter are runs with 2 ObsDates of the same Cultu
 Including a 'group_by' does not fix problem.
 
 Problem fixed by rounding LR_s to 0 digits, allows full join of 'FRRfDataLight' with 'O2Data'.
+However, on rare occasions,  rounding generates duplicate whole LR_s which duplicates that row in the full join.
 
 Note: The first plot (grid row) always shows ActPARCorrinter with maximum PAR at ~ 800 LR_S despite the dataframe only containing zeros, as it should. A glitch with ggplot??
 ```{r O2FRRfprelimplot2, warning = false}
@@ -361,10 +363,10 @@ Final ActPARCorrInter == 0 is lost from slope fitting b/c it is lumped in with i
 induction_s = 40 #hack solution to only take slope of O2 well within given light level
 end_s = 175
 
-#TempCont missing?
+
 O2Slopes <- O2SlopeDataClean %>%
   filter(!is.na(ActPARCorrinter)) %>%
-  nest(.by =  any_of(c("ObsDate", "FilenameO2", "Project", "CultureID","FileDateTime", "Ex_WL", "TempCont", "ActPARCorrinter")))
+  nest(.by =  any_of(c("ObsDate", "FilenameO2", "Project", "CultureID", "FileDateTime", "Ex_WL", "TempCont", "ActPARCorrinter")))
 
 #head(O2Slopes)
 
@@ -458,7 +460,8 @@ O2SlopesClean <- O2Slopes %>%
 # Merge O2Slopes Data with FRRf Data and Catalog
 
 ```{r}
-# generated 19 extra rows of data - Mireille to debug
+# generated 19 extra rows of data - Mireille to debug (Answer: The final ActPARCorrinter == 0 induction curve was in the nest. Produced 19 extra rows when unnested, 1 for each CultureID)
+
 O2FRRf <- O2Slopes %>%
   unnest(data) %>%
   filter(!is.na(SourceDataFile)) %>%
@@ -498,7 +501,7 @@ O2FRRfMeta %>%
   ggplot() +
   geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_aLHIIOxbomax, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
-  facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   theme_bw()
 
 
@@ -509,7 +512,7 @@ O2FRRfMeta %>%
   geom_point(aes(x = O2evln_O2lsMIN, y = ETRC_TauAv, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = O2evln_O2lsMIN, y = ETRC_TauAv, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   theme_bw()
 
 O2FRRfMeta %>%
@@ -518,7 +521,7 @@ O2FRRfMeta %>%
   geom_point(aes(x = O2evln_O2lsMIN, y = ETRqpOxbo, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = O2evln_O2lsMIN, y = ETRqpOxbo, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
@@ -529,7 +532,7 @@ O2FRRfMeta %>%
   geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
@@ -540,7 +543,7 @@ O2FRRfMeta %>%
   geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_FoSigmax_m2psii, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
@@ -551,7 +554,7 @@ O2FRRfMeta %>%
   geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRC_TauAv_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
@@ -559,10 +562,10 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 400) %>%
   ggplot() +
-  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL)) +
-  scale_colour_manual(values = Colours_nm) +
-  geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  geom_point(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = CultureID)) +
+  # scale_colour_manual(values = Colours_nm) +
+   geom_smooth(aes(x = O2evln_O2lsMIN, y = JVPSII_ETRqpOxbo_aLHIIOxboSigmax_m2psii, colour = Ex_WL), method = "lm") +
+  facet_grid(rows = vars(Strain)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
@@ -581,7 +584,7 @@ O2FRRfMeta %>%
   geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = ActPARCorr, y = (O2evln_O2lsMIN * 4)/ETRqpOxbo, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme_bw()
 
@@ -593,7 +596,7 @@ O2FRRfMeta %>%
   geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = ActPARCorr, y =(O2evln_O2lsMIN * 4)/ETRC_TauAv, colour = Ex_WL), method = "lm") +
-  #facet_grid(cols = vars(Strain)) +
+  facet_grid(rows = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme_bw()
 
