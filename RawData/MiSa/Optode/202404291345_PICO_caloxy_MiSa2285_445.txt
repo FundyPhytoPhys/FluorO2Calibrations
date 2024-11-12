@@ -11,7 +11,8 @@ Ch 1	0% Calibration	Air with 100% Humidity or Air Saturated Water	20.167	20.834	
 Data	Smoothing:	3	
 Date:	2024-04-29	
 			 	Oxygen				Compensation	Temperature	('C)		Pressure	Humidity	Temp. Probe	Int. Temp.	Analog In	Raw Data:	 dphi (°)			Signal	Intensity	(mV)		Ambient	Light	(mV)		Advanced Raw Values (only logged while raw data window is open)	
-Date	Time (HH:MM:SS)	Time (s)	Comment	Ch1	Ch2	Ch3	Ch4	Ch 1	Ch 2	Ch 3	Ch 4	(mbar)	(%)	('C)	('C)	 (mV)	Ch 1	Ch 2	Ch 3	Ch 4	Ch1	Ch2	Ch3	Ch4	Ch1	Ch2	Ch3	Ch4	 (MainBkgd->MainBkgd->MainPhi->RefAmpl->RefBkgnd->RefPhi)	
+Date	Time (HH:MM:SS)	Time (s)	Comment	Ch1	Ch2	Ch3	Ch4	Ch 1	Ch 2	Ch 3	Ch 4	(mbar)	(%)	('C)	('C)	 (mV)	Ch 1	Ch 2	Ch 3	Ch 4	Ch1	Ch2	Ch3	Ch4	Ch1	Ch2	Ch3	Ch4	 (MainBkgd->MainBkgd->MainPhi->RefAmpl->RefBkgnd->RefPhi)
+2024-04-29	13:53:45	0.00		33.532	---	---	---	22.536	---	---	---	1011.37	34.209	22.536	---	---	43.457	---	---	---	599.147	---	---	---	5.529	---	---	---		
 2024-04-29	13:53:46	1.00		33.532	---	---	---	22.536	---	---	---	1011.37	34.209	22.536	---	---	43.457	---	---	---	599.147	---	---	---	5.529	---	---	---	
 2024-04-29	13:53:47	2.00		33.553	---	---	---	22.527	---	---	---	1011.38	34.530	22.527	---	---	43.454	---	---	---	599.139	---	---	---	5.510	---	---	---	
 2024-04-29	13:53:48	3.00		33.542	---	---	---	22.541	---	---	---	1011.35	34.794	22.541	---	---	43.454	---	---	---	599.144	---	---	---	5.507	---	---	---	

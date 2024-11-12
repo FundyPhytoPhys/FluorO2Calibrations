@@ -185,7 +185,7 @@ head(O2Data)
 ```{r prelimplot O2}
 O2Data %>%
   ggplot() +
-  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL)) +
+  geom_point(aes(x = LR_s, y = O2_umolL, colour = Ex_WL), size = 0.1) +
   scale_colour_manual(values = Colours_nm) +
   facet_grid(rows = vars(CultureID, FileDateTime), cols = vars(Ex_WL)) +
   theme(strip.text.y = element_text(size = 5, angle=0)) +
@@ -336,7 +336,7 @@ Including a 'group_by' does not fix problem.
 
 Problem fixed by rounding LR_s to 0 digits, allows full join of 'FRRfDataLight' with 'O2Data'.
 
-Note: The first row always shows ActPARCorrinter with maximum PAR at ~ 800 LR_S despite the dataframe only containing zeros as it should. A glitch with ggplot??
+Note: The first plot (grid row) always shows ActPARCorrinter with maximum PAR at ~ 800 LR_S despite the dataframe only containing zeros, as it should. A glitch with ggplot??
 ```{r O2FRRfprelimplot2, warning = false}
 O2SlopeDataClean %>%
   ggplot() +
@@ -382,7 +382,7 @@ O2Slopes <- O2Slopes %>%
   select(-term) %>%
   rename(O2_umolLs = estimate) %>%
   select(-c(statistic, p.value)) %>%
-  group_by(ObsDate, FilenameO2, CultureID, Ex_WL) %>% 
+  group_by(ObsDate, FilenameO2, FileDateTime, CultureID, Ex_WL) %>% 
   mutate(O2evln_O2ls = ((O2_umolLs - first(O2_umolLs)) * photons_umol)) %>%
   mutate(O2evln_O2lsMIN = ((O2_umolLs - min(O2_umolLs)) * photons_umol)) %>%
   ungroup()
@@ -417,12 +417,19 @@ facet_grid(cols = vars(Ex_WL), rows = vars(CultureID, FileDateTime)) +
 
 ```
 
-Filter runs with positive initial dark slope?
+Filter runs with positive initial dark slope? ### Bring to Doug's attention- I think line 424 should be < 0 ####
 ```{r remove positive dark slopes}
-# # O2SlopesClean <- O2Slopes %>%
-# #   group_by(Date, FilenameO2, Run, ObsDate, CultureID, Ex_WL,  TempCont) %>%
-# #     filter(any(O2_umolLs[ActPARCorrinter == 0] > 0)) %>%
-# #   ungroup()
+# O2SlopesClean <- O2Slopes %>%
+#   group_by(Date, FilenameO2, Run, ObsDate, CultureID, Ex_WL,  TempCont) %>%
+#     filter(any(O2_umolLs[ActPARCorrinter == 0] > 0)) %>%
+#   ungroup()
+
+O2SlopesClean <- O2Slopes %>%
+  group_by(ObsDate, FilenameO2, FileDateTime, CultureID, Ex_WL) %>%
+    filter(any(O2_umolLs[ActPARCorrinter == 0] < 0)) %>%
+  ungroup()
+
+
 # 
 # O2SlopesClean <- O2Slopes %>%
 #   filter(ActPARCorrinter != 0) %>%
