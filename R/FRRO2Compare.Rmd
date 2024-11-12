@@ -253,7 +253,7 @@ intersect(colnames(O2Data),colnames(FRRfDataLight))
 O2Data <- subset(O2Data, row.names(O2Data) != 36014)
 FRRfDataLight <- subset(FRRfDataLight, row.names(FRRfDataLight) != 201)
 
-O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL", "LR_s"), suffix = c("O2", "FRRf"), keep = FALSE)
+O2SlopeData <- left_join(x = O2Data, y = FRRfDataLight, by = c("ObsDate", "CultureID" , "Ex_WL", "LR_s", "TempCont"), suffix = c("O2", "FRRf"), keep = FALSE)
 
 #, 
 # "FileDateTime" = "StartDateTimeSol" lines up data when replicates are preformed on same day, "ObsDate" does not have time.
