@@ -615,8 +615,8 @@ O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 400) %>% # was < 200 
   filter(Ex_WL == 445) |>
   ggplot() +
-  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRqpOxbo, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
-  scale_colour_manual(values = Colours_nm) +
+  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRqpOxbo, x = ActPARCorr, colour = Strain, shape = O2_Category)) +
+  # scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = ActPARCorr, y = (O2evln_O2lsMIN * 4)/ETRqpOxbo, colour = Ex_WL), method = "lm") +
   # facet_grid(rows = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
@@ -625,7 +625,7 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 400) %>% # was < 200 
   ggplot() +
-  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
+  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = WL, shape = O2_Category)) +
   scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = ActPARCorr, y =(O2evln_O2lsMIN * 4)/ETRC_TauAv, colour = Ex_WL), method = "lm") +
   facet_grid(rows = vars(Strain)) +
@@ -635,8 +635,8 @@ O2FRRfMeta %>%
 O2FRRfMeta %>%
   filter(ActPARCorrinter > 0 & ActPARCorrinter < 400) %>% # was < 200 
   ggplot() +
-  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Ex_WL, shape = Strain)) +
-  scale_colour_manual(values = Colours_nm) +
+  geom_point(aes(y  = (O2evln_O2lsMIN * 4)/ETRC_TauAv, x = ActPARCorr, colour = Strain, shape = O2_Category)) +
+  # scale_colour_manual(values = Colours_nm) +
   geom_smooth(aes(x = ActPARCorr, y =(O2evln_O2lsMIN * 4)/ETRC_TauAv, colour = Ex_WL), method = "lm") +
   # facet_grid(rows = vars(Strain)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
