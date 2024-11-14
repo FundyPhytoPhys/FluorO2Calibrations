@@ -716,7 +716,7 @@ All of SySl data then lost; not applicable in this case
 
 # Fit regressions of FRRf estimators of JVPSII vs. O2evln_O2lsMIN multiply by 4X to convert to e_Ls
 Some models fail if intercept forced = 0
-Decided to combine all strains in JVPSII calibration; however, after filtering out positive O2_umolLs slopes in the initial dark, only 1 SS120 calibration remains and [PSII] increases with increasing ActPAR. Reconsider including SS120.
+Decided to combine all strains in JVPSII calibration; however, after filtering out positive O2_umolLs slopes in the initial dark, only 1 SS120 calibration remains and [PSII] increases with increasing ActPAR. Reconsider excluding SS120.
 ```{r JVPSII_e regressions}
 
 
