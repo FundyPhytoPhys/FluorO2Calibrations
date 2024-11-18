@@ -420,9 +420,6 @@ SolFitsTrim2 %>%
 
 ```{r save SolFitsTrim data}
 saveRDS(SolFitsTrim2, file.path(DataOut, paste(Project, Run, "SolFitsTrim.Rds", sep = "_"), fsep = .Platform$file.sep))
-
-#LRC to PicoDiel
-saveRDS(SolFitsTrim2, file.path("..", "..", "PicoDiel", "Data", "ImportedData","ImportedSolisenseData", paste(Run, "LRC_Fits.Rds", sep = "_"), fsep = .Platform$file.sep))
 ```
 
 
