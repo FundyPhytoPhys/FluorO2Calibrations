@@ -46,7 +46,7 @@ CalibData <- file.path("..", "CalibrationData")
 
 Run <- "MiSaProchloro"
 
-DataIn <- file.path("..", "RawData", "MiSa", "Solisense", "LRC",  fsep = .Platform$file.sep)
+DataIn <- file.path("..", "RawData", "MiSa", "Solisense",  fsep = .Platform$file.sep)
 
 FileID <- "fit"
 
@@ -151,16 +151,12 @@ colnames(SolFits)
 
 SolFitsTrim <- SolFits %>% 
   filter(!grepl("----", DATE)) %>% # remove rows with "----" in DATE
-  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...33`,`...34`,`...37`,`...38`,`...39`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
-  # mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/"),
-  #        Filename = str_remove(string = Filename, pattern = "_caloxy"),
-  #        Filename = str_remove(string = Filename, pattern = "_refit.csv")
-  #        ) %>%
-  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/LRC/"),
-         Filename = str_remove(string = Filename, pattern = "_fit.csv")
+  select(-c("RFID_User_Data", "Barcode_Data", "PIF",  "Lon", "Lat", "GPS_stat", "Dur-Wat", "PQP_Size", `...38`, "Alpha", "Ek", "Pmax" )) %>% # remove superfluous columns
+  mutate(Filename = str_remove(string = Filename, pattern = "../RawData/MiSa/Solisense/"),
+         Filename = str_remove(string = Filename, pattern = "_caloxy"),
+         Filename = str_remove(string = Filename, pattern = "_refit.csv")
          ) %>%
-  # separate(Filename, into = c("Project", "RunDateTime", "CultureID", "Ex_WL"), sep = "([\\/\\_])", remove = FALSE) %>%
-    separate(Filename, into = c("Project", "RunDateTime", "CultureID", "Ex_WL", "MeasureO2"), sep = "([\\/\\_])", remove = FALSE) %>%
+  separate(Filename, into = c("Project", "RunDateTime", "CultureID", "Ex_WL"), sep = "([\\/\\_])", remove = FALSE) %>%
   mutate(RunDateTime = ymd_hm(RunDateTime), 
          TIME = as.character(TIME)) %>%  #time-column may be read in as factor, and as.character changes it to numeric; using lubdridate::hms would only change the format to 13H 4M 2S but does not work later to merge into one DateTime-column
   rename(SourceDataFile = `Source DataFile`,
@@ -213,17 +209,12 @@ SolFitsTrim <- SolFitsTrim |>
 
 head(SolFitsTrim)
 
-#This for LRC
+
+
 SolFitsTrim <- SolFitsTrim %>%
-  mutate(across(.cols = c(Light_1:P680Q), .fns = as.numeric)) %>%
+  mutate(across(.cols = c(Light_1:ETR), .fns = as.numeric)) %>%
   mutate(ActPAR = nm445 + nm470 + nm505 + nm535 + nm590 + IR) |>
   mutate(ActPARCorr = nm445Corr + nm470Corr + nm505Corr + nm535Corr + nm590Corr + IRCorr)#better ways to do this?
-
-# This for Caloxy
-# SolFitsTrim <- SolFitsTrim %>%
-#   mutate(across(.cols = c(Light_1:ETR), .fns = as.numeric)) %>%
-#   mutate(ActPAR = nm445 + nm470 + nm505 + nm535 + nm590 + IR) |>
-#   mutate(ActPARCorr = nm445Corr + nm470Corr + nm505Corr + nm535Corr + nm590Corr + IRCorr)#better ways to do this?
 
 ```
 
@@ -254,7 +245,7 @@ SolFitsTrim <- SolFitsTrim %>%
 
 ```{r prelimplots}
 SolFitsTrim %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1192") %>% 
   filter(Dark1s == 0) %>%
   filter(Tau2QA < 20000) %>%
   ggplot() +
@@ -264,7 +255,7 @@ SolFitsTrim %>%
   theme_bw()
 
 SolFitsTrim %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1192") %>% 
   filter(Dark1s == 0) %>%
   filter(Tau2QA < 20000) %>%
   ggplot() +
@@ -274,7 +265,7 @@ SolFitsTrim %>%
   theme_bw()
 
 SolFitsTrim %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1192") %>% 
   #filter(Dark1s != 0) %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = Alp2QA, colour = as.factor(TempCont), size = LR_s)) +
@@ -341,7 +332,7 @@ SolFitsTrim2 <- SolFitsTrim %>%
 ```{r prelimplots2}
 
 SolFitsTrim2 %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1191") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = ActPARCorr, y = ETRqpOxbo, colour = Ex_WL)) +
@@ -353,7 +344,7 @@ SolFitsTrim2 %>%
 
 
 SolFitsTrim2 %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1191") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = ETRqp, y = ETRqpOxbo, colour = Ex_WL)) +
@@ -367,7 +358,7 @@ SolFitsTrim2 %>%
 
 
 SolFitsTrim2 %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1191") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x = C_TauAv, y = qpOxbo, colour = Ex_WL)) +
@@ -382,7 +373,7 @@ SolFitsTrim2 %>%
 
 
 SolFitsTrim2 %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1191") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = Ex_WL)) +
@@ -395,7 +386,7 @@ SolFitsTrim2 %>%
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
 
 SolFitsTrim2 %>%
-  filter(CultureID == "MiSa1342") %>% 
+  filter(CultureID == "MiSa1191") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
   geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = Ex_WL)) +
@@ -408,14 +399,16 @@ SolFitsTrim2 %>%
   scale_x_continuous(sec.axis = sec_axis(~ . , name = "Ex_WL", breaks = NULL, labels = NULL)) 
 
 ```
+
+
 ```{r}
 
 SolFitsTrim2 %>%
   # filter(CultureID == "MiSa1342") %>% 
   filter(Dark1s == 0) %>%
   ggplot() +
-  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = Ex_WL)) +
-  scale_colour_manual(values = Colours_nm) +
+  geom_point(aes(x =  JVPSII_aLHIIminmax, y = JVPSII_ETRqpOxbo_FoSigmax_A2psii, colour = as.factor(StartDateTimeSol))) +
+  # scale_colour_manual(values = Colours_nm) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") + 
   #coord_fixed(ratio = 1) +
   facet_grid(cols = vars(Ex_WL)) +
