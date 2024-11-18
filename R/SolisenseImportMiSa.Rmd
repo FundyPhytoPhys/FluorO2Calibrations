@@ -40,7 +40,7 @@ knitr::opts_chunk$set(fig.path='Figs/')
 
 # Set Project Variables
 ```{r set project variables}
-Project <- "LRC"
+Project <- "FluorO2"
 DataOut <- file.path("..", "ImportData", "FRRf")
 CalibData <- file.path("..", "CalibrationData")
 
